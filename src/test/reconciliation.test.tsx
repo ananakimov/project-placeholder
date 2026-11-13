@@ -6,6 +6,7 @@ import { ChecksProvider } from "@/context/ChecksContext";
 import { checks, type Check } from "@/data/mock";
 import { sumMoney } from "@/components/money-format";
 
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
 beforeAll(() => { HTMLElement.prototype.scrollTo = vi.fn(); });
 afterEach(cleanup);
 const b = checks.find((check) => check.id === "b")!;

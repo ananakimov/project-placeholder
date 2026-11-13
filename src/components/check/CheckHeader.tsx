@@ -1,11 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import type { Check } from "@/data/mock";
-import { useState } from "react";
-import { ExportDialog } from "./ExportDialog";
 
 const tabs = [
   { to: "/checks/$id", label: "Результат", exact: true },
@@ -13,7 +9,6 @@ const tabs = [
 ] as const;
 
 export function CheckHeader({ check }: { check: Check }) {
-  const [exportOpen, setExportOpen] = useState(false);
   const heading = `КФЗ № ${check.kfzNumber} · ${check.reportRow ?? "3 этап, 2026 г."}`;
   return (
     <div>
@@ -40,12 +35,6 @@ export function CheckHeader({ check }: { check: Check }) {
             </Badge>
             {(check.synthetic || check.kfzNumber === "б/н") && <span>Синтетика</span>}
           </div>
-        </div>
-        <div className="mt-1 flex gap-2" data-print-hide>
-          <Button onClick={() => setExportOpen(true)}>
-            <Download className="h-4 w-4" /> Экспорт
-          </Button>
-          <ExportDialog check={check} open={exportOpen} onOpenChange={setExportOpen} />
         </div>
       </div>
       <nav aria-label="Разделы проверки" className="check-tabs mt-6 flex gap-6 border-b" data-print-hide>

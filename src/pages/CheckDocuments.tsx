@@ -1,0 +1,173 @@
+import { useState } from "react";
+import { FileSearch } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { FileTypeIcon } from "@/components/FileTypeIcon";
+import { StatusLabel } from "@/components/StatusChip";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { SourceViewer } from "@/components/check/SourceViewer";
+import type { Check, Doc, SourceRef } from "@/data/mock";
+
+const PREFIX: Record<string, string> = { a: "А", b: "Б", c: "В", g: "g-" };
+const STATES: Doc["state"][] = [
+  "прочитан",
+  "дубль",
+  "вне периода",
+  "другой договор",
+  "не прочитан",
+];
+export function CheckDocuments({ check }: { check: Check }) {
+  const [f, setF] = useState<"all" | Doc["state"]>("all");
+  const [open, setOpen] = useState<Doc | null>(null);
+  const refs = (d: Doc) =>
+    check.rows
+      .filter((r) => r.sources.some((s) => s.docId === d.id))
+      .map((r) => `${PREFIX[check.id]}${check.rows.indexOf(r) + 1}`);
+  const list = check.docs.filter((d) => f === "all" || d.state === f);
+  const openRow = open
+    ? (check.rows.find((r) => r.sources.some((s) => s.docId === open.id)) ?? check.rows[0])
+    : undefined;
+  const source: SourceRef | null = open
+    ? (openRow?.sources.find((s) => s.docId === open.id) ??
+      (() => {
+        const fl = open.fields.find((x) => x.label === "Сумма") ?? open.fields[0];
+        return {
+          docId: open.id,
+          page: fl?.page ?? 1,
+          bbox: fl?.bbox ?? [0.05, 0.05, 0.9, 0.9],
+          text: fl ? `${fl.label}: ${fl.value}` : open.title,
+          amount: null,
+          matchType: "точное" as const,
+        };
+      })())
+    : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-1">
+        <span id="doc-filter" className="text-[12px] text-muted-foreground">
+          Состояние файла
+        </span>
+        <ToggleGroup
+          aria-labelledby="doc-filter"
+          type="single"
+          value={f}
+          onValueChange={(v) => v && setF(v as typeof f)}
+          variant="outline"
+          className="justify-start bg-card"
+        >
+          <ToggleGroupItem value="all" className="px-3 text-[13px]">
+            Все ({check.docs.length})
+          </ToggleGroupItem>
+          {STATES.map((s) => (
+            <ToggleGroupItem key={s} value={s} className="px-3 text-[13px]">
+              {s} ({check.docs.filter((d) => d.state === s).length})
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </div>
+      <div className="library-table overflow-hidden bg-card">
+        <Table className="text-[13px] [&_td]:whitespace-normal">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              {["Файл", "Тип", "Номер", "Дата", "Договор", "Стр.", "Состояние", "Строки КФЗ"].map(
+                (h) => (
+                  <TableHead key={h} className="h-9 text-[12px] font-medium text-muted-foreground">
+                    {h}
+                  </TableHead>
+                ),
+              )}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {list.map((d) => (
+              <TableRow
+                key={d.id}
+                tabIndex={0}
+                onClick={() => setOpen(d)}
+                onKeyDown={(e) => e.key === "Enter" && setOpen(d)}
+                className="cursor-pointer even:bg-row-zebra hover:bg-row-hover"
+              >
+                <TableCell className="max-w-[280px] font-medium">
+                  <div className="library-file">
+                    <FileTypeIcon
+                      extension={
+                        d.title.toLowerCase().includes("ведомость") ||
+                        d.title.toLowerCase().includes("взнос")
+                          ? "XLS"
+                          : "PDF"
+                      }
+                    />
+                    <span>{d.title}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="max-w-[160px] text-muted-foreground">{d.type}</TableCell>
+                <TableCell className="tabular-nums">{d.number}</TableCell>
+                <TableCell className="tabular-nums">{d.date}</TableCell>
+                <TableCell className="tabular-nums">{d.contract}</TableCell>
+                <TableCell className="tabular-nums">{d.pages}</TableCell>
+                <TableCell>
+                  <StatusLabel
+                    status={
+                      d.state === "прочитан"
+                        ? "verified"
+                        : d.state === "не прочитан"
+                          ? "discrepancy"
+                          : "unverified"
+                    }
+                    label={d.state}
+                  />
+                </TableCell>
+                <TableCell className="tabular-nums text-muted-foreground">
+                  {refs(d).length
+                    ? refs(d).map((x, i) => (
+                        <span key={x}>
+                          {i > 0 && ", "}
+                          <Link
+                            to="/checks/$id"
+                            params={{ id: check.id }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline"
+                          >
+                            {x}
+                          </Link>
+                        </span>
+                      ))
+                    : "—"}
+                </TableCell>
+              </TableRow>
+            ))}
+            {list.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                  <FileSearch className="mx-auto mb-2 h-6 w-6" />
+                  Документов в этом состоянии нет
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Sheet open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
+        <SheetContent className="w-[520px] overflow-y-auto sm:max-w-[520px]">
+          <SheetHeader>
+            <SheetTitle>Документ</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4">
+            {open && openRow && (
+              <SourceViewer row={openRow} source={source} doc={open} onWhy={() => {}} />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}

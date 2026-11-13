@@ -10,33 +10,147 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LogRouteImport } from './routes/log'
+import { Route as ChecksIndexRouteImport } from './routes/checks.index'
+import { Route as ChecksIdRouteImport } from './routes/checks.$id'
+import { Route as ChecksNewRouteImport } from './routes/checks.new'
+import { Route as ChecksIdIndexRouteImport } from './routes/checks.$id.index'
+import { Route as ChecksIdConclusionRouteImport } from './routes/checks.$id.conclusion'
+import { Route as ChecksIdDocumentsRouteImport } from './routes/checks.$id.documents'
+import { Route as ChecksIdExceptionsRouteImport } from './routes/checks.$id.exceptions'
+import { Route as ChecksIdLogRouteImport } from './routes/checks.$id.log'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LogRoute = LogRouteImport.update({
+  id: '/log',
+  path: '/log',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecksIndexRoute = ChecksIndexRouteImport.update({
+  id: '/checks/',
+  path: '/checks/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecksIdRoute = ChecksIdRouteImport.update({
+  id: '/checks/$id',
+  path: '/checks/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecksNewRoute = ChecksNewRouteImport.update({
+  id: '/checks/new',
+  path: '/checks/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChecksIdIndexRoute = ChecksIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ChecksIdRoute,
+} as any)
+const ChecksIdConclusionRoute = ChecksIdConclusionRouteImport.update({
+  id: '/conclusion',
+  path: '/conclusion',
+  getParentRoute: () => ChecksIdRoute,
+} as any)
+const ChecksIdDocumentsRoute = ChecksIdDocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => ChecksIdRoute,
+} as any)
+const ChecksIdExceptionsRoute = ChecksIdExceptionsRouteImport.update({
+  id: '/exceptions',
+  path: '/exceptions',
+  getParentRoute: () => ChecksIdRoute,
+} as any)
+const ChecksIdLogRoute = ChecksIdLogRouteImport.update({
+  id: '/log',
+  path: '/log',
+  getParentRoute: () => ChecksIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/log': typeof LogRoute
+  '/checks/$id': typeof ChecksIdRouteWithChildren
+  '/checks/new': typeof ChecksNewRoute
+  '/checks/': typeof ChecksIndexRoute
+  '/checks/$id/conclusion': typeof ChecksIdConclusionRoute
+  '/checks/$id/documents': typeof ChecksIdDocumentsRoute
+  '/checks/$id/exceptions': typeof ChecksIdExceptionsRoute
+  '/checks/$id/log': typeof ChecksIdLogRoute
+  '/checks/$id/': typeof ChecksIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/log': typeof LogRoute
+  '/checks/new': typeof ChecksNewRoute
+  '/checks': typeof ChecksIndexRoute
+  '/checks/$id/conclusion': typeof ChecksIdConclusionRoute
+  '/checks/$id/documents': typeof ChecksIdDocumentsRoute
+  '/checks/$id/exceptions': typeof ChecksIdExceptionsRoute
+  '/checks/$id/log': typeof ChecksIdLogRoute
+  '/checks/$id': typeof ChecksIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/log': typeof LogRoute
+  '/checks/$id': typeof ChecksIdRouteWithChildren
+  '/checks/new': typeof ChecksNewRoute
+  '/checks/': typeof ChecksIndexRoute
+  '/checks/$id/conclusion': typeof ChecksIdConclusionRoute
+  '/checks/$id/documents': typeof ChecksIdDocumentsRoute
+  '/checks/$id/exceptions': typeof ChecksIdExceptionsRoute
+  '/checks/$id/log': typeof ChecksIdLogRoute
+  '/checks/$id/': typeof ChecksIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/log'
+    | '/checks/$id'
+    | '/checks/new'
+    | '/checks/'
+    | '/checks/$id/conclusion'
+    | '/checks/$id/documents'
+    | '/checks/$id/exceptions'
+    | '/checks/$id/log'
+    | '/checks/$id/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/log'
+    | '/checks/new'
+    | '/checks'
+    | '/checks/$id/conclusion'
+    | '/checks/$id/documents'
+    | '/checks/$id/exceptions'
+    | '/checks/$id/log'
+    | '/checks/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/log'
+    | '/checks/$id'
+    | '/checks/new'
+    | '/checks/'
+    | '/checks/$id/conclusion'
+    | '/checks/$id/documents'
+    | '/checks/$id/exceptions'
+    | '/checks/$id/log'
+    | '/checks/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LogRoute: typeof LogRoute
+  ChecksIdRoute: typeof ChecksIdRouteWithChildren
+  ChecksNewRoute: typeof ChecksNewRoute
+  ChecksIndexRoute: typeof ChecksIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +162,98 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/log': {
+      id: '/log'
+      path: '/log'
+      fullPath: '/log'
+      preLoaderRoute: typeof LogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checks/': {
+      id: '/checks/'
+      path: '/checks'
+      fullPath: '/checks/'
+      preLoaderRoute: typeof ChecksIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checks/$id': {
+      id: '/checks/$id'
+      path: '/checks/$id'
+      fullPath: '/checks/$id'
+      preLoaderRoute: typeof ChecksIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checks/new': {
+      id: '/checks/new'
+      path: '/checks/new'
+      fullPath: '/checks/new'
+      preLoaderRoute: typeof ChecksNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checks/$id/': {
+      id: '/checks/$id/'
+      path: '/'
+      fullPath: '/checks/$id/'
+      preLoaderRoute: typeof ChecksIdIndexRouteImport
+      parentRoute: typeof ChecksIdRoute
+    }
+    '/checks/$id/conclusion': {
+      id: '/checks/$id/conclusion'
+      path: '/conclusion'
+      fullPath: '/checks/$id/conclusion'
+      preLoaderRoute: typeof ChecksIdConclusionRouteImport
+      parentRoute: typeof ChecksIdRoute
+    }
+    '/checks/$id/documents': {
+      id: '/checks/$id/documents'
+      path: '/documents'
+      fullPath: '/checks/$id/documents'
+      preLoaderRoute: typeof ChecksIdDocumentsRouteImport
+      parentRoute: typeof ChecksIdRoute
+    }
+    '/checks/$id/exceptions': {
+      id: '/checks/$id/exceptions'
+      path: '/exceptions'
+      fullPath: '/checks/$id/exceptions'
+      preLoaderRoute: typeof ChecksIdExceptionsRouteImport
+      parentRoute: typeof ChecksIdRoute
+    }
+    '/checks/$id/log': {
+      id: '/checks/$id/log'
+      path: '/log'
+      fullPath: '/checks/$id/log'
+      preLoaderRoute: typeof ChecksIdLogRouteImport
+      parentRoute: typeof ChecksIdRoute
+    }
   }
 }
 
+interface ChecksIdRouteChildren {
+  ChecksIdConclusionRoute: typeof ChecksIdConclusionRoute
+  ChecksIdDocumentsRoute: typeof ChecksIdDocumentsRoute
+  ChecksIdExceptionsRoute: typeof ChecksIdExceptionsRoute
+  ChecksIdLogRoute: typeof ChecksIdLogRoute
+  ChecksIdIndexRoute: typeof ChecksIdIndexRoute
+}
+
+const ChecksIdRouteChildren: ChecksIdRouteChildren = {
+  ChecksIdConclusionRoute: ChecksIdConclusionRoute,
+  ChecksIdDocumentsRoute: ChecksIdDocumentsRoute,
+  ChecksIdExceptionsRoute: ChecksIdExceptionsRoute,
+  ChecksIdLogRoute: ChecksIdLogRoute,
+  ChecksIdIndexRoute: ChecksIdIndexRoute,
+}
+
+const ChecksIdRouteWithChildren = ChecksIdRoute._addFileChildren(
+  ChecksIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LogRoute: LogRoute,
+  ChecksIdRoute: ChecksIdRouteWithChildren,
+  ChecksNewRoute: ChecksNewRoute,
+  ChecksIndexRoute: ChecksIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,24 +1,44 @@
-# Project Placeholder
+# DocCheck
 
-Пока пустой проект, потом его обновим из другого проекта
+Веб-приложение для сверки финансовых документов. Стартовый экран — «Новая проверка». На экране сверки таблица расположена рядом с документом: можно переходить между расхождениями, видеть подсвеченные суммы и проверять источник значения.
 
-This project was built with [Lovable](https://lovable.dev).
+## Возможности
 
-## Build with Lovable
+- Создание проверки и выбор файлов.
+- Сверка таблицы с документом, вкладки полей и аннотаций, масштабирование документа.
+- Переход между расхождениями, отметки проверки, комментарии и журнал действий.
+- Заключение по проверке и экспорт результатов.
+- Роли «Бухгалтер» и «Аспирант».
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/9228d300-4935-4d89-928b-ec3268542aca).
+## Локальный запуск
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Требуются Node.js 22 и npm 10.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+git clone https://github.com/ananakimov/project-placeholder.git
+cd project-placeholder
+npm ci
 npm run dev
 ```
+
+## Проверки и сборка
+
+```sh
+npm test
+npx tsc --noEmit
+npm run build
+```
+
+Сборка использует TanStack Start / Nitro. Скрипт `scripts/prepare-sites.mjs` также подготавливает каталоги `dist/client` и `dist/server` для Sites.
+
+## Текущее состояние
+
+Это интерактивный прототип с заранее подготовленными данными. Выбранные файлы хранятся в памяти сессии и не обрабатываются; загрузка открывает фиксированный пример проверки. Подсветка документа, пояснения и ответы помощника основаны на примерах, без OCR и серверного анализа файлов.
+
+«Бухгалтер» может отмечать результаты проверки, редактировать предусмотренные значения, комментировать и подписывать пример заключения. «Аспирант» может создавать проверки и просматривать результаты. Переключатель ролей управляет интерфейсом и не является серверной авторизацией.
+
+## Разработка
+
+Стек: React 19, TypeScript, TanStack Start / Router, Tailwind CSS 4, Radix UI, Vite и Vitest.
+
+Репозиторий связан с [проектом Lovable](https://lovable.dev/projects/9228d300-4935-4d89-928b-ec3268542aca). Изменения в `main` синхронизируются с редактором Lovable.

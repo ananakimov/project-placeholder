@@ -28,3 +28,7 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Application structure
+- Keep `src/data/rules.ts` as browser-safe explanation data, not a rule-management route; shared explanation panels consume it without navigation.
+- Keep wizard uploads in memory and navigate to the fixed mock result without deriving or changing check data; the prototype does not read uploaded files.

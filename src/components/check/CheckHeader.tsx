@@ -11,7 +11,6 @@ const tabs = [
   { to: "/checks/$id/exceptions", label: "Разбор расхождений" },
   { to: "/checks/$id/documents", label: "Документы" },
   { to: "/checks/$id/conclusion", label: "Заключение" },
-  { to: "/checks/$id/log", label: "Журнал" },
 ] as const;
 
 export function CheckHeader({ check }: { check: Check }) {

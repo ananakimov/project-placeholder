@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { CheckCheck, CheckCircle2, Eye, Flag, PencilLine, ArrowRight } from "lucide-react";
+import { CheckCheck, CheckCircle2, Flag, PencilLine, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,12 +18,10 @@ import { Money } from "@/components/Money";
 import { StatusChip } from "@/components/StatusChip";
 import { SidePanel, type PanelTab } from "@/components/check/SidePanel";
 import { useChecks } from "@/context/ChecksContext";
-import { useRole } from "@/context/RoleContext";
 import type { Check, Row } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 const fixTarget = (label: string) => label.match(/→\s*([\d.]+)/)?.[1] ?? "";
-const fixSource = (label: string) => label.match(/([\d.]+)\s*→/)?.[1] ?? "";
 
 export function CheckExceptions({ check }: { check: Check }) {
   const store = useChecks();
@@ -117,7 +115,6 @@ export function CheckExceptions({ check }: { check: Check }) {
 
 function Actions({ check, row }: { check: Check; row: Row }) {
   const store = useChecks();
-  const { role } = useRole();
   const [comment, setComment] = useState(store.comments[row.id] ?? "");
   const saved = store.comments[row.id];
   useEffect(() => {
@@ -128,20 +125,6 @@ function Actions({ check, row }: { check: Check; row: Row }) {
   const picks = Object.entries(row.variants ?? {}).filter(([k]) => k.startsWith("pick-"));
   const isReviewed = store.reviewed[check.id]?.has(row.id);
   const flagged = store.flagged.has(row.id);
-  const log = (action: string, before?: string, after?: string) =>
-    store.addLog(check.id, {
-      action,
-      object: row.name,
-      ...(before !== undefined && { before }),
-      ...(after !== undefined && { after }),
-    });
-
-  if (role === "Аспирант")
-    return (
-      <div className="flex items-center gap-2 rounded-lg border bg-unverified-bg px-4 py-3 text-sm text-unverified">
-        <Eye className="h-4 w-4" /> Режим просмотра
-      </div>
-    );
 
   return (
     <div className="space-y-4 rounded-lg border bg-card p-4 shadow-card">
@@ -151,7 +134,6 @@ function Actions({ check, row }: { check: Check; row: Row }) {
           disabled={isReviewed}
           onClick={() => {
             store.markReviewed(check.id, row.id);
-            log("Отмечено как просмотренное", "не просмотрено", "просмотрено");
           }}
         >
           <CheckCheck className="h-4 w-4" />{" "}
@@ -161,11 +143,6 @@ function Actions({ check, row }: { check: Check; row: Row }) {
           variant="outline"
           onClick={() => {
             store.toggleFlag(row.id);
-            log(
-              flagged ? "Снят флаг ручной проверки" : "Флаг: нужна ручная проверка",
-              flagged ? "флаг" : "—",
-              flagged ? "—" : "флаг",
-            );
           }}
         >
           <Flag className={cn("h-4 w-4", flagged && "text-discrepancy")} />{" "}
@@ -184,13 +161,7 @@ function Actions({ check, row }: { check: Check; row: Row }) {
           <RadioGroup
             value={store.applied[check.id]?.[row.id] ?? ""}
             onValueChange={(k) => {
-              const prev = store.applied[check.id]?.[row.id];
               store.applyVariant(check.id, row.id, k);
-              log(
-                "Выбран документ",
-                prev ? row.variants?.[prev]?.label : "не выбран",
-                row.variants?.[k]?.label,
-              );
               toast("Статус пересчитан правилами");
             }}
           >
@@ -235,9 +206,7 @@ function Actions({ check, row }: { check: Check; row: Row }) {
           variant="outline"
           disabled={!comment.trim() || comment === store.comments[row.id]}
           onClick={() => {
-            const before = store.comments[row.id];
             store.addComment(row.id, comment.trim());
-            log("Комментарий", before ?? "—", comment.trim());
           }}
         >
           Сохранить
@@ -249,9 +218,8 @@ function Actions({ check, row }: { check: Check; row: Row }) {
           open={fixOpen}
           onOpenChange={setFixOpen}
           label={fix.label}
-          onSave={(value, reason) => {
+          onSave={() => {
             store.applyVariant(check.id, row.id, "fix");
-            log("Исправлено значение", fixSource(fix.label), `${value} (причина: ${reason})`);
             toast("Статус пересчитан правилами");
             setFixOpen(false);
           }}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy, Eye, FileWarning, PenLine } from "lucide-react";
+import { Copy, FileWarning, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,10 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { AiBadge } from "@/components/AiBadge";
 import { Money } from "@/components/Money";
 import { useChecks } from "@/context/ChecksContext";
-import { useRole } from "@/context/RoleContext";
 import { countByStatus } from "@/pages/Checks";
 import { CONCLUSION_SUMMARY, EXPLANATION_DRAFTS, PROBLEMS, REQUEST_DRAFTS } from "@/data/problems";
 import type { Check } from "@/data/mock";
@@ -56,7 +54,6 @@ function Card({
 
 export function CheckConclusion({ check }: { check: Check }) {
   const store = useChecks();
-  const { role } = useRole();
   const signature = store.signature[check.id] ?? null;
   const [text, setText] = useState(store.explanations[check.id] ?? "");
   const [reqOpen, setReqOpen] = useState(false);
@@ -78,12 +75,6 @@ export function CheckConclusion({ check }: { check: Check }) {
 
   const sign = () => {
     store.sign(check.id);
-    store.addLog(check.id, {
-      action: "Вывод подписан",
-      object: check.title,
-      before: check.state,
-      after: `Подписано · ${check.conclusion}`,
-    });
     toast("Вывод подписан");
   };
 
@@ -217,7 +208,7 @@ export function CheckConclusion({ check }: { check: Check }) {
         extra={
           request && (
             <Button size="sm" variant="outline" onClick={() => setReqOpen(true)} data-print-hide>
-              Черновик запроса <AiBadge />
+              Черновик запроса
             </Button>
           )
         }
@@ -238,7 +229,6 @@ export function CheckConclusion({ check }: { check: Check }) {
       <Card
         title="Пояснение бухгалтера"
         extra={
-          role === "Бухгалтер" &&
           !signature && (
             <Button
               size="sm"
@@ -246,7 +236,7 @@ export function CheckConclusion({ check }: { check: Check }) {
               onClick={() => setText(EXPLANATION_DRAFTS[check.id] ?? "")}
               data-print-hide
             >
-              <PenLine className="h-3.5 w-3.5" /> Черновик пояснения <AiBadge />
+              <PenLine className="h-3.5 w-3.5" /> Черновик пояснения
             </Button>
           )
         }
@@ -255,7 +245,7 @@ export function CheckConclusion({ check }: { check: Check }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={4}
-          disabled={!!signature || role !== "Бухгалтер"}
+          disabled={!!signature}
           placeholder="Опишите основания вывода"
           aria-label="Пояснение бухгалтера"
         />
@@ -265,13 +255,6 @@ export function CheckConclusion({ check }: { check: Check }) {
         {signature ? (
           <div className="rounded-lg border border-verified/30 bg-verified-bg px-4 py-3 text-sm text-verified tabular-nums">
             Подписано: {signature.by}, {signature.at}
-          </div>
-        ) : role === "Аспирант" ? (
-          <div
-            className="flex items-center gap-2 rounded-lg border bg-unverified-bg px-4 py-3 text-sm text-unverified"
-            data-print-hide
-          >
-            <Eye className="h-4 w-4" /> Режим просмотра
           </div>
         ) : (
           <div className="flex items-center gap-4" data-print-hide>
@@ -291,7 +274,7 @@ export function CheckConclusion({ check }: { check: Check }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              Черновик запроса <AiBadge />
+              Черновик запроса
             </DialogTitle>
           </DialogHeader>
           <p className="rounded-md border border-ai/20 bg-ai-bg p-3 text-[13px] leading-relaxed">

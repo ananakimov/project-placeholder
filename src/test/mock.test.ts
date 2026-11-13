@@ -3,6 +3,12 @@ import { checks } from "@/data/mock";
 import { countByStatus } from "@/pages/Checks";
 
 describe("mock checks", () => {
+  it("keeps the check dates independently of the removed journal", () => {
+    expect(checks.map(({ id, date }) => [id, date])).toEqual([
+      ["a", "12.11.2026"], ["b", "12.11.2026"], ["c", "13.11.2026"], ["g", "13.11.2026"],
+    ]);
+    for (const check of checks) expect(check).not.toHaveProperty("log");
+  });
   it("counts only indicator rows: a=9, b=11, c=9, g=6", () => {
     const totals = checks.map((c) => { const n = countByStatus(c); return n.verified + n.discrepancy + n.unverified; });
     expect(totals).toEqual([9, 11, 9, 6]);

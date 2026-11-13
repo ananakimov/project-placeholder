@@ -3,7 +3,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CheckDetail } from "@/pages/CheckDetail";
 import { SourceViewer } from "@/components/check/SourceViewer";
 import { ChecksProvider } from "@/context/ChecksContext";
-import { RoleProvider } from "@/context/RoleContext";
 import { checks } from "@/data/mock";
 
 beforeAll(() => {
@@ -14,15 +13,35 @@ const b = checks.find((c) => c.id === "b")!;
 const a = checks.find((c) => c.id === "a")!;
 function desk(check = b) {
   return render(
-    <RoleProvider>
-      <ChecksProvider>
-        <CheckDetail check={check} />
-      </ChecksProvider>
-    </RoleProvider>,
+    <ChecksProvider>
+      <CheckDetail check={check} />
+    </ChecksProvider>,
   );
 }
 
 describe("Reconciliation workspace", () => {
+  it("opens the source and its exact amount bbox when a table row is clicked from the explanation", () => {
+    desk();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Объяснение и рекомендация" }), { key: "Enter" });
+    expect(screen.getByText("Что не сходится")).toBeInTheDocument();
+    const row = screen.getByRole("button", { name: "Командировки" }).closest("tr");
+    if (!row) throw new Error("Indicator row missing");
+    fireEvent.click(row);
+
+    expect(screen.getByRole("tab", { name: "Источник" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 48\s570,00/)).toHaveStyle({
+      left: "66%", top: "34%", width: "20%", height: "3%",
+    });
+  });
+
+  it("does not offer an explanation block for a verified indicator", () => {
+    desk(a);
+    expect(screen.queryByRole("tab", { name: "Объяснение и рекомендация" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Что не сходится")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Источник" })).toHaveAttribute("aria-selected", "true");
+  });
+
   it("moves between actual discrepancies, excluding service totals and verified rows", () => {
     desk();
     const issues = b.rows.filter((r) => !r.service && r.status === "discrepancy");

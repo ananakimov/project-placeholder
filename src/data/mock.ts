@@ -11,6 +11,8 @@ export type RowVariant = {
 export type Row = {
   id: string; name: string; reported: string; expected: string | null; delta: string | null; status: Status;
   category: string | null; reason: string; ruleId: string; sources: SourceRef[]; partialNote?: string | undefined; manual?: boolean;
+  causes?: string[];
+  recommendation?: string;
   /** Служебная строка (арифметика/итог) — не входит в счётчики показателей. */
   service?: boolean;
   variants?: Record<string, RowVariant>;
@@ -20,15 +22,15 @@ export type Row = {
   nested?: boolean;
 };
 export type Doc = { id: string; title: string; type: string; number: string; date: string; contract: string; pages: number; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
-export type LogEntry = { at: string; actor: string; action: string; object: string; before?: string; after?: string };
 export type Check = {
   id: "a" | "b" | "c" | "g"; title: string; contract: string; period: string;
   reportRow?: string;
+  date: string;
   conclusion: "Достоверен" | "Недостоверен" | "Подтвердить полностью нельзя";
   state: "Готово к разбору" | "Подписано" | "Нужна повторная подпись";
   rows: Row[]; docs: Doc[];
   coverage: { verifiedSum: string; discrepancySum: string; unverifiedSum: string; totalSum: string; verifiedPct: string; discrepancyPct: string; unverifiedPct: string };
-  missing: string[]; log: LogEntry[];
+  missing: string[];
   /** Порядок карточек на экране исключений: расхождения по убыванию |Δ|, затем непроверенные. */
   exceptionOrder: string[];
   /** Документы, исключённые правилами из расчёта (не являются расхождением, если статья сходится). */
@@ -69,14 +71,6 @@ function monthly(prefix: string, kind: "ved" | "vzn", contract: string, amounts:
       : [doc(`${prefix}-vzn-${mm}`, `Расчёт страховых взносов, ${m} 2026`, "Расчёт взносов", `РВ-${mm}`, date, contract, a, { bbox: bboxes[i] ?? [0.6, 0.64, 0.24, 0.03] })];
   });
 }
-function systemLog(date: string, title: string): LogEntry[] {
-  return [
-    { at: `${date} 09:12`, actor: "Система", action: "Загрузка пакета документов", object: title },
-    { at: `${date} 09:14`, actor: "Система", action: "Извлечение реквизитов", object: title },
-    { at: `${date} 09:15`, actor: "Система", action: "Запуск правил v1.0", object: title },
-    { at: `${date} 09:16`, actor: "Система", action: "Фиксация отпечатка пакета", object: title, after: "sha256: 3f9a…c21 (синтетика)" },
-  ];
-}
 const row = (r: Omit<Row, "category" | "reason"> & Partial<Pick<Row, "category" | "reason">>): Row => ({
   category: null, reason: r.status === "verified" ? "Сумма совпадает с документами" : "", ...r,
 });
@@ -111,7 +105,7 @@ const checkA: Check = {
   ],
   coverage: { verifiedSum: "4186000.50", discrepancySum: "0.00", unverifiedSum: "0.00", totalSum: "4186000.50", verifiedPct: "100.0", discrepancyPct: "0.0", unverifiedPct: "0.0" },
   missing: [],
-  log: systemLog("12.11.2026", "Этап 2, договор СИН-2026/11"),
+  date: "12.11.2026",
   excluded: [],
   exceptionOrder: [],
 };
@@ -137,6 +131,8 @@ const checkB: Check = {
   docs: [bKfz, ...bVed, ...bVzn, bSp22, bSp27, bSp27c, bUpd0903, bUpd0811, ...bAr, bAo, bSv, bLc, bUpd0719],
   rows: [
     row({
+      causes: ["Больничные не попали в сальдо.", "Учтены выданные авансы.", "Фактические затраты ниже плановых.", "Ошибка переноса или распознавания суммы ведомости за август."],
+      recommendation: "Сверьте ведомость за август с оригиналом и запросите пояснение или исправленную ведомость.",
       id: "b-1", name: "Оплата труда", reported: "1520000.00", expected: "1515000.00", delta: "5000.00", status: "discrepancy", category: "сумма", ruleId: "R-AGG-01",
       reason: "Сумма ведомостей меньше суммы в отчёте: август 375 000,00",
       sources: [src(bVed[0], "380000.00"), src(bVed[1], "380000.00"), src(bVed[2], "375000.00"), src(bVed[3], "380000.00")],
@@ -153,22 +149,37 @@ const checkB: Check = {
     }),
     row({ id: "b-2", name: "Страховые взносы", reported: "454500.00", expected: "454500.00", delta: "0.00", status: "verified", ruleId: "R-AGG-01", sources: [src(bVzn[0], "114000.00"), src(bVzn[1], "114000.00"), src(bVzn[2], "112500.00"), src(bVzn[3], "114000.00")] }),
     row({ id: "b-3", name: "Субподряд: этап 2.1", reported: "350000.00", expected: "350000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(bSp22, "350000.00")] }),
-    row({ id: "b-4", name: "Субподряд: этап 2.2", reported: "560000.00", expected: "280000.00", delta: "280000.00", status: "discrepancy", category: "дубль", ruleId: "R-DUP-01", reason: "Акт СП-27 учтён дважды: файл «Акт СП-27 (копия)» — дубль, в сумму не входит", sources: [src(bSp27, "280000.00")] }),
-    row({ id: "b-5", name: "Материалы", reported: "96400.00", expected: "0.00", delta: "96400.00", status: "discrepancy", category: "период", ruleId: "R-PER-01", reason: "УПД № 0903-1 датирован 03.10.2026 — вне периода; в периоде подтверждено 0,00",
+    row({
+      causes: ["Один и тот же акт СП-27 повторно учтён в отчёте.", "Копия акта принята за отдельный документ."],
+      recommendation: "Проверьте реквизиты акта СП-27 и исключите повторный учёт.",
+      id: "b-4", name: "Субподряд: этап 2.2", reported: "560000.00", expected: "280000.00", delta: "280000.00", status: "discrepancy", category: "дубль", ruleId: "R-DUP-01", reason: "Акт СП-27 учтён дважды: файл «Акт СП-27 (копия)» — дубль, в сумму не входит", sources: [src(bSp27, "280000.00")] }),
+    row({
+      causes: ["В отчёт включены затраты за пределами периода этапа.", "В пакет приложен документ за другой период."],
+      recommendation: "Представьте подтверждающий документ за период этапа или уточните период отражения затрат.",
+      id: "b-5", name: "Материалы", reported: "96400.00", expected: "0.00", delta: "96400.00", status: "discrepancy", category: "период", ruleId: "R-PER-01", reason: "УПД № 0903-1 датирован 03.10.2026 — вне периода; в периоде подтверждено 0,00",
       sources: [{ docId: bUpd0903.id, page: 1, bbox: [0.12, 0.1, 0.2, 0.03], text: "от 03.10.2026", amount: "96400.00", matchType: "точное" }] }),
     row({ id: "b-6", name: "Оборудование", reported: "412000.00", expected: "412000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(bUpd0811, "412000.00", "Всего к оплате")] }),
     row({ id: "b-7", name: "Аренда помещения", reported: "120000.00", expected: "120000.00", delta: "0.00", status: "verified", ruleId: "R-AGG-01", sources: bAr.map((d) => src(d, "40000.00")) }),
-    row({ id: "b-8", name: "Командировки", reported: "48750.00", expected: "48570.00", delta: "180.00", status: "discrepancy", category: "сумма", ruleId: "R-TOL-01", reason: "Сумма авансового отчёта меньше суммы в отчёте", sources: [src(bAo, "48570.00")] }),
-    row({ id: "b-9", name: "Услуги связи", reported: "9600.00", expected: "0.00", delta: "9600.00", status: "discrepancy", category: "договор/связь", ruleId: "R-KEY-01", reason: "В счёт-акте указан договор СИН-2026/09, а не СИН-2026/12",
+    row({
+      causes: ["Возможна перестановка цифр при переносе суммы: 48 750 и 48 570.", "Ошибка распознавания суммы авансового отчёта."],
+      recommendation: "Сверьте сумму на странице 2 авансового отчёта АО-44 с оригиналом и уточните отчёт.",
+      id: "b-8", name: "Командировки", reported: "48750.00", expected: "48570.00", delta: "180.00", status: "discrepancy", category: "сумма", ruleId: "R-TOL-01", reason: "Сумма авансового отчёта меньше суммы в отчёте", sources: [src(bAo, "48570.00")] }),
+    row({
+      causes: ["Приложен счёт-акт по другому договору.", "В реквизитах документа неверно указан договор."],
+      recommendation: "Представьте документ по договору СИН-2026/12 или уточните реквизиты счёт-акта С-1108.",
+      id: "b-9", name: "Услуги связи", reported: "9600.00", expected: "0.00", delta: "9600.00", status: "discrepancy", category: "договор/связь", ruleId: "R-KEY-01", reason: "В счёт-акте указан договор СИН-2026/09, а не СИН-2026/12",
       sources: [{ docId: bSv.id, page: 1, bbox: [0.14, 0.18, 0.36, 0.03], text: "Договор: СИН-2026/09", amount: "9600.00", matchType: "точное" }] }),
     row({ id: "b-10", name: "Лицензия ПО", reported: "64000.00", expected: "64000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(bLc, "64000.00")] }),
     row({ id: "b-11", name: "Канцелярия", reported: "7245.60", expected: "7245.60", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [{ ...src(bUpd0719, "7245.60", "Всего к оплате"), matchType: "после нормализации" }] }),
     row({ id: "b-12", name: "Арифметика КФЗ: сумма строк = итог", reported: "3642495.60", expected: "3642495.60", delta: "0.00", status: "verified", ruleId: "R-ARI-01", service: true, reason: "Сумма строк равна итогу", sources: [src(bKfz, "3642495.60")] }),
-    row({ id: "b-13", name: "Итого по этапу против документов", reported: "3642495.60", expected: "3251315.60", delta: "391180.00", status: "discrepancy", category: "сумма (следствие Б1, Б4, Б5, Б8, Б9)", ruleId: "R-COV-01", service: true, reason: "Следствие расхождений в строках Б1, Б4, Б5, Б8, Б9", sources: [src(bKfz, "3642495.60")] }),
+    row({
+      causes: ["В итог вошли суммы по повторяющимся или неподходящим документам.", "В отдельных статьях сумма отчёта отличается от подтверждённой."],
+      recommendation: "Разберите строки с расхождениями и уточните итог отчёта по подтверждающим документам.",
+      id: "b-13", name: "Итого по этапу против документов", reported: "3642495.60", expected: "3251315.60", delta: "391180.00", status: "discrepancy", category: "сумма (следствие Б1, Б4, Б5, Б8, Б9)", ruleId: "R-COV-01", service: true, reason: "Следствие расхождений в строках Б1, Б4, Б5, Б8, Б9", sources: [src(bKfz, "3642495.60")] }),
   ],
   coverage: { verifiedSum: "1407745.60", discrepancySum: "2234750.00", unverifiedSum: "0.00", totalSum: "3642495.60", verifiedPct: "38.6", discrepancyPct: "61.4", unverifiedPct: "0.0" },
   missing: [],
-  log: systemLog("12.11.2026", "Этап 2, договор СИН-2026/12"),
+  date: "12.11.2026",
   excluded: [],
   exceptionOrder: ["b-13", "b-4", "b-5", "b-9", "b-1", "b-8"],
 };
@@ -192,13 +203,24 @@ const checkC: Check = {
   id: "c", title: "Этап 2, договор СИН-2026/14", contract: C, period: PERIOD, conclusion: "Подтвердить полностью нельзя", state: "Готово к разбору",
   docs: [cKfz, ...cVed, ...cVzn, cSp31, cDog33, cUpd0822, cUpd0905, cAr07, cAr08, cAr09, cAr091, cSv],
   rows: [
-    row({ id: "c-1", name: "Оплата труда", reported: "960000.00", expected: null, delta: null, status: "unverified", ruleId: "R-AGG-01", reason: "Пропущен документ: ведомость за сентябрь", partialNote: "найдено 720000.00 за 3 из 4 мес.", sources: cVed.map((d) => src(d, "240000.00")) }),
+    row({
+      causes: ["В пакет не включена ведомость за сентябрь.", "Больничные не попали в сальдо.", "Учтены выданные авансы.", "Фактические затраты ниже плановых."],
+      recommendation: "Представьте ведомость за сентябрь 2026 и сверьте начисления, больничные и авансы за период.",
+      id: "c-1", name: "Оплата труда", reported: "960000.00", expected: null, delta: null, status: "unverified", ruleId: "R-AGG-01", reason: "Пропущен документ: ведомость за сентябрь", partialNote: "найдено 720000.00 за 3 из 4 мес.", sources: cVed.map((d) => src(d, "240000.00")) }),
     row({ id: "c-2", name: "Страховые взносы", reported: "288000.00", expected: "288000.00", delta: "0.00", status: "verified", ruleId: "R-AGG-01", sources: cVzn.map((d) => src(d, "72000.00")) }),
     row({ id: "c-3", name: "Субподряд: этап 2.1", reported: "500000.00", expected: "500000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(cSp31, "500000.00")] }),
-    row({ id: "c-4", name: "Субподряд: этап 2.2", reported: "210000.00", expected: null, delta: null, status: "unverified", ruleId: "R-KEY-01", reason: "Пропущен документ: есть договор № СП-33, нет акта (договор не подтверждает факт затрат)", sources: [src(cDog33, "210000.00", "Цена договора")] }),
-    row({ id: "c-5", name: "Материалы", reported: "133800.00", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Документ не прочитан: «УПД 0822-7.png», качество ниже порога OCR", sources: [{ docId: cUpd0822.id, page: 1, bbox: [0.05, 0.05, 0.9, 0.9], text: "Файл не распознан", amount: null, matchType: "точное" }] }),
+    row({
+      causes: ["В пакет включён только договор без акта выполненных работ.", "Акт не приложен или ещё не оформлен."],
+      recommendation: "Представьте акт выполненных работ по договору СП-33.",
+      id: "c-4", name: "Субподряд: этап 2.2", reported: "210000.00", expected: null, delta: null, status: "unverified", ruleId: "R-KEY-01", reason: "Пропущен документ: есть договор № СП-33, нет акта (договор не подтверждает факт затрат)", sources: [src(cDog33, "210000.00", "Цена договора")] }),
+    row({
+      causes: ["Качество скана недостаточно для чтения реквизитов и суммы.", "Изображение документа может быть размыто или обрезано."],
+      recommendation: "Представьте читаемую копию УПД № 0822-7.",
+      id: "c-5", name: "Материалы", reported: "133800.00", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Документ не прочитан: «УПД 0822-7.png», качество ниже порога OCR", sources: [{ docId: cUpd0822.id, page: 1, bbox: [0.05, 0.05, 0.9, 0.9], text: "Файл не распознан", amount: null, matchType: "точное" }] }),
     row({ id: "c-6", name: "Оборудование", reported: "275000.00", expected: "275000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(cUpd0905, "275000.00", "Всего к оплате")] }),
     row({
+      causes: ["За сентябрь приложены два акта по разным договорам.", "Не указано, какой акт относится к проверяемому этапу."],
+      recommendation: "На вкладке «Разбор расхождений» выберите акт за сентябрь, относящийся к этапу, и проверьте договор.",
       id: "c-7", name: "Аренда помещения", reported: "90000.00", expected: null, delta: null, status: "unverified", ruleId: "R-KEY-01",
       reason: "Неоднозначная связь за сентябрь: 2 кандидата (АР-09 по договору А-7 и АР-09/1 по договору А-7/1)", partialNote: "найдено 60000.00 за 2 мес.",
       sources: [src(cAr07, "30000.00"), src(cAr08, "30000.00"), src(cAr09, "30000.00"), src(cAr091, "30000.00")],
@@ -210,18 +232,21 @@ const checkC: Check = {
         },
         "pick-ar09-1": {
           label: "Выбран АР-09/1 (договор А-7/1)",
-          patch: { status: "discrepancy", expected: "60000.00", delta: "30000.00", category: "договор/связь", manual: true, reason: "Связь выбрана вручную, проверена правилами" },
+          patch: { causes: ["Выбран акт АР-09/1 по договору А-7/1, который не подтверждает затраты по договору А-7."], recommendation: "Проверьте договор и выберите акт АР-09 либо представьте подтверждение связи с этапом.", status: "discrepancy", expected: "60000.00", delta: "30000.00", category: "договор/связь", manual: true, reason: "Связь выбрана вручную, проверена правилами" },
           checkPatch: { conclusion: "Недостоверен", coverage: { verifiedSum: "1069000.00", discrepancySum: "90000.00", unverifiedSum: "1326100.00", totalSum: "2485100.00", verifiedPct: "43.0", discrepancyPct: "3.6", unverifiedPct: "53.4" } },
         },
       },
     }),
-    row({ id: "c-8", name: "Командировки", reported: "22300.00", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Нет документа", sources: [] }),
+    row({
+      causes: ["Авансовый отчёт по командировкам не включён в пакет.", "Подтверждающие документы ещё не представлены."],
+      recommendation: "Представьте авансовый отчёт по командировкам за период этапа.",
+      id: "c-8", name: "Командировки", reported: "22300.00", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Нет документа", sources: [] }),
     row({ id: "c-9", name: "Услуги связи", reported: "6000.00", expected: "6000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(cSv, "6000.00")] }),
     row({ id: "c-10", name: "Арифметика КФЗ: сумма строк = итог", reported: "2485100.00", expected: "2485100.00", delta: "0.00", status: "verified", ruleId: "R-ARI-01", service: true, reason: "Сумма строк равна итогу", sources: [src(cKfz, "2485100.00")] }),
   ],
   coverage: { verifiedSum: "1069000.00", discrepancySum: "0.00", unverifiedSum: "1416100.00", totalSum: "2485100.00", verifiedPct: "43.0", discrepancyPct: "0.0", unverifiedPct: "57.0" },
   missing: ["Ведомость ЗП за сентябрь", "Акт по договору СП-33", "Читаемая копия УПД 0822-7", "Авансовый отчёт по командировкам", "Решение по акту аренды за сентябрь"],
-  log: systemLog("13.11.2026", "Этап 2, договор СИН-2026/14"),
+  date: "13.11.2026",
   excluded: [],
   exceptionOrder: ["c-1", "c-4", "c-5", "c-7", "c-8"],
 };
@@ -252,17 +277,29 @@ const checkG: Check = {
   rows: [
     row({ id: "g-1", name: "Затраты на оплату труда (0200)", reported: "1240000.00", expected: "1240000.00", delta: "0.00", status: "verified", ruleId: "R-AGG-01", sources: [src(gVed[0], "240000.00"), src(gVed[1], "246000.00"), src(gVed[2], "250000.00"), src(gVed[3], "252000.00"), src(gVed[4], "252000.00")] }),
     row({ id: "g-2", name: "Страховые взносы (0300)", reported: "372000.00", expected: "372000.00", delta: "0.00", status: "verified", ruleId: "R-AGG-01", sources: [src(gVzn[0], "72000.00"), src(gVzn[1], "73800.00"), src(gVzn[2], "75000.00"), src(gVzn[3], "75600.00"), src(gVzn[4], "75600.00")] }),
-    row({ id: "g-3", name: "Общепроизводственные затраты (0800)", reported: "415600.00", expected: "405100.00", delta: "10500.00", status: "discrepancy", category: "сумма", ruleId: "R-AGG-01", reason: "Сумма четырёх документов 405 100,00 меньше суммы в отчёте 415 600,00",
+    row({
+      causes: ["Сумма статьи в отчёте завышена.", "В пакете может отсутствовать документ, подтверждающий разницу."],
+      recommendation: "Представьте документ на 10 500,00 ₽ или исправьте сумму статьи 0800 в отчёте.",
+      id: "g-3", name: "Общепроизводственные затраты (0800)", reported: "415600.00", expected: "405100.00", delta: "10500.00", status: "discrepancy", category: "сумма", ruleId: "R-AGG-01", reason: "Сумма четырёх документов 405 100,00 меньше суммы в отчёте 415 600,00",
       sources: [src(gTo31, "118400.00"), src(gTo48, "96300.00"), src(gKl7, "84200.00"), src(gUpd0426, "106200.00", "Всего к оплате")] }),
     row({ id: "g-4", name: "Общехозяйственные затраты (0900)", reported: "688300.00", expected: "688300.00", delta: "0.00", status: "verified", ruleId: "R-AGG-01", reason: "Сумма совпадает с документами; 3 документа исключены правилами R-DUP-01, R-PER-01, R-KEY-01",
       sources: [src(gIa9, "164000.00"), src(gAd12, "142500.00"), src(gIt, "128800.00"), { ...src(gSv, "117000.00"), matchType: "после нормализации" }, src(gUpr, "136000.00", "Всего к оплате")] }),
-    row({ id: "g-5", name: "Трудоёмкость, чел.-ч", unit: "чел.-ч", reported: "1840", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Нет подтверждающих документов", sources: [] }),
-    row({ id: "g-6", name: "в т.ч. резерв отпусков (внутри 0200)", nested: true, reported: "96000.00", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Нет отдельного подтверждающего документа", sources: [] }),
-    row({ id: "g-7", name: "Итого по этапу против документов", reported: "2715900.00", expected: "2705400.00", delta: "10500.00", status: "discrepancy", category: "сумма (следствие g-3)", ruleId: "R-COV-01", service: true, reason: "Следствие расхождения в строке g-3", sources: [src(gKfz, "2715900.00")] }),
+    row({
+      causes: ["Табели или расчёт трудоёмкости не включены в пакет.", "Представленные документы подтверждают суммы, но не количество часов."],
+      recommendation: "Представьте табели или расчёт трудоёмкости за январь–май 2026.",
+      id: "g-5", name: "Трудоёмкость, чел.-ч", unit: "чел.-ч", reported: "1840", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Нет подтверждающих документов", sources: [] }),
+    row({
+      causes: ["Отдельный расчёт резерва отпусков не приложен.", "Ведомости подтверждают только общую сумму статьи 0200."],
+      recommendation: "Представьте отдельный расчёт резерва отпусков за период этапа.",
+      id: "g-6", name: "в т.ч. резерв отпусков (внутри 0200)", nested: true, reported: "96000.00", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Нет отдельного подтверждающего документа", sources: [] }),
+    row({
+      causes: ["Итог наследует расхождение по статье 0800.", "Сумма статьи 0800 в отчёте не полностью подтверждена документами."],
+      recommendation: "Уточните статью 0800 по документам и проверьте итог этапа.",
+      id: "g-7", name: "Итого по этапу против документов", reported: "2715900.00", expected: "2705400.00", delta: "10500.00", status: "discrepancy", category: "сумма (следствие g-3)", ruleId: "R-COV-01", service: true, reason: "Следствие расхождения в строке g-3", sources: [src(gKfz, "2715900.00")] }),
   ],
   coverage: { verifiedSum: "2300300.00", discrepancySum: "415600.00", unverifiedSum: "0.00", totalSum: "2715900.00", verifiedPct: "84.7", discrepancyPct: "15.3", unverifiedPct: "0.0" },
   missing: ["Расчёт трудоёмкости, чел.-ч", "Документ по резерву отпусков"],
-  log: systemLog("13.11.2026", "Этап 3, договор СИН-2026/15"),
+  date: "13.11.2026",
   excluded: [
     { docId: gAd12c.id, file: "Акт АД-12 (копия).pdf", reason: "дубль", amount: "142500.00", field: "Номер", ruleId: "R-DUP-01", impact: "Совпадает с Актом АД-12 от 27.02.2026: номер, дата, сумма. В сумму не включён, повторно не учтён" },
     { docId: gOr.id, file: "Акт ОР-0603.pdf", reason: "вне периода", amount: "57000.00", field: "Дата", ruleId: "R-PER-01", impact: "Дата 03.06.2026 позже периода 01.01–31.05.2026. В сумму не включён" },
@@ -273,5 +310,3 @@ const checkG: Check = {
 
 export const checks: Check[] = [checkA, checkB, checkC, checkG];
 export const getCheck = (id: string) => checks.find((c) => c.id === id);
-/** Дата проверки — дата первой записи журнала. */
-export const checkDate = (c: Check) => c.log[0]?.at.split(" ")[0] ?? "—";

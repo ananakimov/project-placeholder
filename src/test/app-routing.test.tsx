@@ -25,9 +25,17 @@ describe("App routing", () => {
     expect(router.matchRoutes("/rules").at(-1)?.routeId).toBe(rootRouteId);
   });
 
-  it.each(["/checks/g", "/checks/g/documents", "/checks/g/conclusion", "/checks/g/log"])("keeps %s available", (path) => {
+  it.each(["/checks", "/checks/new", "/checks/g", "/checks/g/documents", "/checks/g/conclusion", "/checks/g/exceptions"])("keeps %s available", (path) => {
     const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
     expect(router.matchRoutes(path).at(-1)?.routeId).not.toBe(rootRouteId);
+  });
+
+  it("removes both journal routes", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    expect(router.routesById).not.toHaveProperty("/log");
+    expect(router.routesById).not.toHaveProperty("/checks/$id/log");
+    expect(router.matchRoutes("/log").at(-1)?.routeId).toBe(rootRouteId);
+    expect(router.matchRoutes("/checks/g/log").some((match) => match._notFound)).toBe(true);
   });
 
   it("matches a page for / instead of falling back to not found", () => {

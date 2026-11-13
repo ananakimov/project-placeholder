@@ -1,10 +1,14 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { checks as baseChecks, type Check, type LogEntry } from "@/data/mock";
-import { nowStamp } from "@/lib/log-time";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { checks as baseChecks, type Check } from "@/data/mock";
 
 export const CURRENT_USER = "Иванова А. С.";
 type Signature = { by: string; at: string } | null;
 type PerCheck<T> = Record<string, T>;
+
+function signatureStamp(d = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
 
 /** Наложение заранее посчитанных вариантов на исходную проверку. Ничего не пересчитывает. */
 export function applyVariants(base: Check, applied: Record<string, string>): Check {
@@ -34,7 +38,6 @@ type Ctx = {
   markReviewed: (checkId: string, rowId: string) => void;
   addComment: (rowId: string, text: string) => void;
   toggleFlag: (rowId: string) => void;
-  addLog: (checkId: string, entry: Omit<LogEntry, "at" | "actor"> & Partial<Pick<LogEntry, "at" | "actor">>) => void;
   explanations: Record<string, string>;
   setExplanation: (checkId: string, text: string) => void;
   sign: (checkId: string) => void;
@@ -50,22 +53,16 @@ export function ChecksProvider({ children }: { children: ReactNode }) {
   const [signature, setSignature] = useState<PerCheck<Signature>>({});
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [resign, setResign] = useState<Set<string>>(new Set());
-  const [extraLog, setExtraLog] = useState<PerCheck<LogEntry[]>>({});
 
   const checks = useMemo(
     () =>
       baseChecks.map((b) => {
         const c = applyVariants(b, applied[b.id] ?? {});
         const state: Check["state"] = signature[b.id] ? "Подписано" : resign.has(b.id) ? "Нужна повторная подпись" : b.state;
-        return { ...c, state, log: [...b.log, ...(extraLog[b.id] ?? [])] };
+        return { ...c, state };
       }),
-    [applied, signature, resign, extraLog],
+    [applied, signature, resign],
   );
-
-  const addLog: Ctx["addLog"] = useCallback((checkId, e) => {
-    const entry: LogEntry = { at: e.at ?? nowStamp(), actor: e.actor ?? CURRENT_USER, action: e.action, object: e.object, ...(e.before !== undefined && { before: e.before }), ...(e.after !== undefined && { after: e.after }) };
-    setExtraLog((p) => ({ ...p, [checkId]: [...(p[checkId] ?? []), entry] }));
-  }, []);
 
   const value: Ctx = {
     checks,
@@ -81,11 +78,10 @@ export function ChecksProvider({ children }: { children: ReactNode }) {
     markReviewed: (checkId, rowId) => setReviewed((p) => ({ ...p, [checkId]: new Set(p[checkId] ?? []).add(rowId) })),
     addComment: (rowId, text) => setComments((p) => ({ ...p, [rowId]: text })),
     toggleFlag: (rowId) => setFlagged((p) => { const n = new Set(p); n.has(rowId) ? n.delete(rowId) : n.add(rowId); return n; }),
-    addLog,
     explanations,
     setExplanation: (checkId, text) => setExplanations((p) => ({ ...p, [checkId]: text })),
     sign: (checkId) => {
-      setSignature((p) => ({ ...p, [checkId]: { by: CURRENT_USER, at: nowStamp() } }));
+      setSignature((p) => ({ ...p, [checkId]: { by: CURRENT_USER, at: signatureStamp() } }));
       setResign((p) => { const n = new Set(p); n.delete(checkId); return n; });
     },
     resetSignature: (checkId) => setSignature((p) => ({ ...p, [checkId]: null })),

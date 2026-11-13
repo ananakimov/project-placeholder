@@ -26,6 +26,7 @@ afterEach(() => {
 function Workspace() {
   const check = useChecks().getCheck("b")!;
   return <>
+    <output data-testid="check-state">{check.state}</output>
     <Sidebar />
     <CheckHeader check={check} />
     <CheckExceptions check={check} />
@@ -46,6 +47,9 @@ describe("Single accountant workflow", () => {
   it("keeps accountant actions available and removes role and journal controls", () => {
     setup();
     expect(screen.getByText("Бухгалтер", { exact: true })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("КФЗ № б/н · 2 этап, 2026 г.");
+    expect(screen.getByText("Синтетика")).toBeInTheDocument();
+    expect(screen.getByText("Договор СИН-2026/12 · Период 01.06.2026–30.09.2026")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Роль пользователя" })).not.toBeInTheDocument();
     expect(screen.queryByText("Аспирант")).not.toBeInTheDocument();
     expect(screen.queryByText("Режим просмотра")).not.toBeInTheDocument();
@@ -91,7 +95,7 @@ describe("Single accountant workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Исправить значение" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Сохранить" }));
     expect(screen.queryByText(/^Подписано:/)).not.toBeInTheDocument();
-    expect(screen.getByText("Нужна повторная подпись", { exact: true })).toBeInTheDocument();
+    expect(screen.getByTestId("check-state")).toHaveTextContent("Нужна повторная подпись");
     expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toBeEnabled();
     expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toHaveValue("Все расхождения рассмотрены.");
   });

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { Check } from "@/data/mock";
 import { useState } from "react";
@@ -15,6 +16,7 @@ const tabs = [
 
 export function CheckHeader({ check }: { check: Check }) {
   const [exportOpen, setExportOpen] = useState(false);
+  const heading = `КФЗ № ${check.kfzNumber} · ${check.reportRow ?? "3 этап, 2026 г."}`;
   return (
     <div>
       <nav className="text-[13px] text-muted-foreground" data-print-hide>
@@ -22,19 +24,23 @@ export function CheckHeader({ check }: { check: Check }) {
           Проверки
         </Link>
         <span className="mx-1.5">/</span>
-        <span className="text-foreground">{check.title}</span>
+        <span className="text-foreground">{heading}</span>
       </nav>
       <div className="mt-3 flex items-start justify-between gap-6">
         <div>
-          <h1 className="font-serif text-[28px] font-semibold leading-tight">{check.title}</h1>
+          <h1 className="font-serif text-[28px] font-semibold leading-tight">{heading}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
             <span className="tabular-nums">
               Договор {check.contract} · Период {check.period}
-              {check.reportRow && ` · Строка отчёта «${check.reportRow}»`}
             </span>
-            <Badge variant="outline" className="font-normal text-foreground">
-              {check.state}
+            <Badge variant="outline" className={cn("font-normal", {
+              "bg-verified-bg text-verified": check.conclusion === "Достоверен",
+              "bg-discrepancy-bg text-discrepancy": check.conclusion === "Недостоверен",
+              "bg-unverified-bg text-unverified": check.conclusion === "Подтвердить полностью нельзя",
+            })}>
+              {check.conclusion}
             </Badge>
+            {(check.synthetic || check.kfzNumber === "б/н") && <span>Синтетика</span>}
           </div>
         </div>
         <div className="mt-1 flex gap-2" data-print-hide>

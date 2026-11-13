@@ -25,6 +25,8 @@ export type Doc = { id: string; title: string; type: string; number: string; dat
 export type Check = {
   id: "a" | "b" | "c" | "g"; title: string; contract: string; period: string;
   reportRow?: string;
+  kfzNumber: string;
+  synthetic?: boolean;
   date: string;
   conclusion: "Достоверен" | "Недостоверен" | "Подтвердить полностью нельзя";
   state: "Готово к разбору" | "Подписано" | "Нужна повторная подпись";
@@ -89,6 +91,8 @@ const aAo = doc("a-ao31", "Авансовый отчёт № АО-31", "Аван
 const aSv = doc("a-c0907", "Счёт-акт № С-0907", "Счёт-акт", "С-0907", "07.09.2026", A, "12980.00", { bbox: [0.68, 0.62, 0.18, 0.03] });
 
 const checkA: Check = {
+  kfzNumber: "б/н", synthetic: true,
+  reportRow: "2 этап, 2026 г.",
   id: "a", title: "Этап 2, договор СИН-2026/11", contract: A, period: PERIOD, conclusion: "Достоверен", state: "Готово к разбору",
   docs: [aKfz, ...aVed, ...aVzn, aSp14, aSp19, aUpd1, aUpd2, aAr, aAo, aSv],
   rows: [
@@ -127,6 +131,8 @@ const bLc = doc("b-lc5", "Акт № ЛЦ-5", "Акт", "ЛЦ-5", "05.07.2026", 
 const bUpd0719 = doc("b-upd0719", "УПД № 0719-3", "УПД", "0719-3", "19.07.2026", B, "7245.60", { bbox: [0.7, 0.82, 0.18, 0.03] });
 
 const checkB: Check = {
+  kfzNumber: "б/н", synthetic: true,
+  reportRow: "2 этап, 2026 г.",
   id: "b", title: "Этап 2, договор СИН-2026/12", contract: B, period: PERIOD, conclusion: "Недостоверен", state: "Готово к разбору",
   docs: [bKfz, ...bVed, ...bVzn, bSp22, bSp27, bSp27c, bUpd0903, bUpd0811, ...bAr, bAo, bSv, bLc, bUpd0719],
   rows: [
@@ -200,6 +206,8 @@ const cAr091 = doc("c-ar09-1", "Акт аренды № АР-09/1", "Акт ар
 const cSv = doc("c-c0911", "Счёт-акт № С-0911", "Счёт-акт", "С-0911", "11.09.2026", C, "6000.00", { bbox: [0.68, 0.62, 0.18, 0.03] });
 
 const checkC: Check = {
+  kfzNumber: "б/н", synthetic: true,
+  reportRow: "2 этап, 2026 г.",
   id: "c", title: "Этап 2, договор СИН-2026/14", contract: C, period: PERIOD, conclusion: "Подтвердить полностью нельзя", state: "Готово к разбору",
   docs: [cKfz, ...cVed, ...cVzn, cSp31, cDog33, cUpd0822, cUpd0905, cAr07, cAr08, cAr09, cAr091, cSv],
   rows: [
@@ -220,7 +228,7 @@ const checkC: Check = {
     row({ id: "c-6", name: "Оборудование", reported: "275000.00", expected: "275000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(cUpd0905, "275000.00", "Всего к оплате")] }),
     row({
       causes: ["За сентябрь приложены два акта по разным договорам.", "Не указано, какой акт относится к проверяемому этапу."],
-      recommendation: "На вкладке «Разбор расхождений» выберите акт за сентябрь, относящийся к этапу, и проверьте договор.",
+      recommendation: "Раскройте строку аренды, сопоставьте акты за сентябрь и проверьте, какой договор относится к этапу.",
       id: "c-7", name: "Аренда помещения", reported: "90000.00", expected: null, delta: null, status: "unverified", ruleId: "R-KEY-01",
       reason: "Неоднозначная связь за сентябрь: 2 кандидата (АР-09 по договору А-7 и АР-09/1 по договору А-7/1)", partialNote: "найдено 60000.00 за 2 мес.",
       sources: [src(cAr07, "30000.00"), src(cAr08, "30000.00"), src(cAr09, "30000.00"), src(cAr091, "30000.00")],
@@ -271,6 +279,7 @@ const gOr = doc("g-or0603", "Акт ОР-0603.pdf", "Акт", "ОР-0603", "03.0
 const gAd31 = doc("g-ad31", "Акт АД-31 от 15.05.2026.pdf", "Акт", "АД-31", "15.05.2026", G, "64000.00", { state: "другой договор", contractShown: "СИН-2026/16", contractBbox: [0.12, 0.14, 0.36, 0.03] });
 
 const checkG: Check = {
+  kfzNumber: "3/7", synthetic: true,
   id: "g", title: "Этап 3, договор СИН-2026/15", contract: G, period: "01.01.2026–31.05.2026", conclusion: "Недостоверен", state: "Готово к разбору",
   reportRow: "Этап 3, 2026 г.",
   docs: [gKfz, ...gVed, ...gVzn, gTo31, gTo48, gKl7, gUpd0426, gIa9, gAd12, gIt, gSv, gUpr, gAd12c, gOr, gAd31],

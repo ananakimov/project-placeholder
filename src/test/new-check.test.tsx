@@ -98,14 +98,16 @@ describe("Two-step new check", () => {
     launchAndCheck();
   });
 
-  it("adds a report row only to g without changing other check metadata", () => {
+  it("keeps the stage metadata and identifies the attached synthetic KFZ", () => {
     expect(checks.find((check) => check.id === "g")).toMatchObject({
       reportRow: "Этап 3, 2026 г.",
+      kfzNumber: "3/7",
+      synthetic: true,
       contract: "СИН-2026/15",
       period: "01.01.2026–31.05.2026",
     });
     for (const id of ["a", "b", "c"]) {
-      expect(checks.find((check) => check.id === id)?.reportRow).toBeUndefined();
+      expect(checks.find((check) => check.id === id)).toMatchObject({ reportRow: "2 этап, 2026 г.", kfzNumber: "б/н", synthetic: true });
     }
   });
 });

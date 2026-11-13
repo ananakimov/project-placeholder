@@ -5,6 +5,7 @@ import type { Check, Row, SourceRef } from "@/data/mock";
 import { AiExplainPanel } from "./AiExplainPanel";
 import { RULES, RULESET_VERSION, RULE_TOLERANCE } from "@/data/rules";
 import { SourceViewer } from "./SourceViewer";
+import { DocumentFields } from "./DocumentFields";
 import { Money } from "@/components/Money";
 import { StatusChip } from "@/components/StatusChip";
 export type PanelTab = "source" | "why" | "rule";
@@ -148,6 +149,7 @@ function SelectedPanel({
                 </span>
               </div>
             )}
+            <DocumentFields doc={doc} />
             <SourceViewer row={row} source={source} doc={doc} onWhy={() => onTab("why")} />
           </TabsContent>
         </Tabs>

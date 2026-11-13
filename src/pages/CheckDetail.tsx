@@ -14,12 +14,10 @@ import {
   X,
 } from "lucide-react";
 import { Money } from "@/components/Money";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DocumentFields } from "@/components/check/DocumentFields";
 import { SidePanel, type PanelTab } from "@/components/check/SidePanel";
 import { ExcludedDocs } from "@/components/check/ExcludedDocs";
 import { countByStatus } from "@/pages/Checks";
-import type { Check as CheckData, SourceRef, Status } from "@/data/mock";
+import type { Check as CheckData, Status } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/components/money-format";
 
@@ -37,8 +35,6 @@ function Reconciliation({ check }: { check: CheckData }) {
     sourceIndex: 0,
   }));
   const [tab, setTab] = useState<PanelTab>("source");
-  const [leftView, setLeftView] = useState("table");
-  const [focusedSource, setFocusedSource] = useState<SourceRef | null>(null);
   const [focus, setFocus] = useState(false);
   const selectedElement = useRef<HTMLTableRowElement>(null);
   const tableScroll = useRef<HTMLDivElement>(null);
@@ -62,19 +58,15 @@ function Reconciliation({ check }: { check: CheckData }) {
     );
   }, [check.rows, filter, query, docById]);
   const selected = rows.find((r) => r.id === selection.rowId) ?? null;
-  const source = focusedSource ?? selected?.sources[selection.sourceIndex] ?? null;
-  const selectedDoc = source ? (docById.get(source.docId) ?? null) : null;
   const select = (rowId: string, sourceIndex = 0) => {
     setSelection({ rowId, sourceIndex });
-    setFocusedSource(null);
     setTab("source");
   };
   useEffect(() => {
     if (!rows.some((r) => r.id === selection.rowId)) {
       const next = rows.find((r) => !r.service && r.status === "discrepancy") ?? rows[0];
       setSelection({ rowId: next?.id ?? "", sourceIndex: 0 });
-      setFocusedSource(null);
-      setTab("source");
+        setTab("source");
     }
   }, [rows, selection.rowId]);
   useEffect(() => {
@@ -200,7 +192,7 @@ function Reconciliation({ check }: { check: CheckData }) {
           </div>
         </div>
         <div className="reconcile-panes">
-          <Tabs value={leftView} onValueChange={setLeftView} className="reconcile-left">
+          <div className="reconcile-left">
             <div className="reconcile-left-header">
               <div>
                 <h2>Показатели отчёта</h2>
@@ -208,11 +200,7 @@ function Reconciliation({ check }: { check: CheckData }) {
               </div>
               <span className="record-count">{total}</span>
             </div>
-            <TabsList className="reconcile-view-tabs" aria-label="Представление показателя">
-              <TabsTrigger value="table">Таблица</TabsTrigger>
-              <TabsTrigger value="fields">Поля документа</TabsTrigger>
-            </TabsList>
-            <TabsContent value="table" className="reconcile-table-content">
+            <div className="reconcile-table-content">
               <div className="reconcile-filters" aria-label="Статус показателя">
                 {filters.map((f) => (
                   <button
@@ -438,24 +426,13 @@ function Reconciliation({ check }: { check: CheckData }) {
                 </span>
                 <span>Суммы в рублях</span>
               </div>
-            </TabsContent>
-            <TabsContent value="fields" className="reconcile-fields-content">
-              <DocumentFields
-                doc={selectedDoc}
-                source={source}
-                onLocate={(field) => {
-                  setFocusedSource(field);
-                  setTab("source");
-                }}
-              />
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
           <aside className="reconcile-right" aria-label="Документ и подтверждение">
             <SidePanel
               check={check}
               row={selected}
               sourceIndex={selection.sourceIndex}
-              focusedSource={focusedSource}
               onSourceChange={(index) => select(selection.rowId, index)}
               tab={tab}
               onTab={setTab}

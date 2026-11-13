@@ -111,40 +111,34 @@ describe("Reconciliation workspace", () => {
     expect(screen.getByText("Нет подтверждающего документа")).toBeInTheDocument();
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
   });
-  it("links extracted fields to their exact page and preserves zoom within the document", () => {
+  it("shows document metadata above the viewer and preserves zoom across pages", () => {
     desk(a);
     const row = a.rows.find((r) => r.id === "a-7")!;
     fireEvent.click(screen.getByRole("button", { name: row.name }));
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Поля документа" }), { key: "Enter" });
-    expect(screen.getByRole("textbox", { name: "Сумма" })).toHaveValue("180\u202f000,00");
+    const source = row.sources[0]!;
+    const doc = a.docs.find((item) => item.id === source.docId)!;
+    expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent(
+      ["Номер", "Дата", "Договор"].map((label) => doc.fields.find((field) => field.label === label)!.value).join(" · "),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Увеличить масштаб" }));
-    fireEvent.click(screen.getByRole("button", { name: "Показать поле «Дата» в документе" }));
+    fireEvent.click(screen.getByRole("button", { name: "Предыдущая страница" }));
     expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Подсвеченный фрагмент: Дата: 30.09.2026")).toHaveAttribute(
-      "data-kind",
-      "date",
-    );
+    expect(screen.getByLabelText("Распознанное поле: Дата: 30.09.2026")).toHaveAttribute("data-kind", "date");
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
-    fireEvent.click(screen.getByRole("button", { name: "Показать поле «Сумма» в документе" }));
+    fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Подсвеченный фрагмент: Сумма:/)).toHaveAttribute(
-      "data-kind",
-      "money",
-    );
+    expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toHaveAttribute("data-kind", "money");
   });
-  it("keeps the fields synchronized when switching documents or discrepancies", () => {
+  it("keeps metadata and highlights synchronized when switching documents or discrepancies", () => {
     desk();
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Поля документа" }), { key: "Enter" });
-    fireEvent.click(screen.getByRole("button", { name: "Показать поле «Дата» в документе" }));
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Ведомость ЗП, август 2026, источник 3" }), {
-      key: "Enter",
-    });
-    expect(screen.getByRole("textbox", { name: "Дата" })).toHaveValue("31.08.2026");
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Ведомость ЗП, август 2026, источник 3" }), { key: "Enter" });
+    expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent("ВЗ-08 · 31.08.2026 · СИН-2026/12");
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 375\s000,00/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Следующее расхождение" }));
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 280\s000,00/)).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Сумма" })).toHaveValue("280\u202f000,00");
+    expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent("СП-27 · 28.08.2026 · СИН-2026/12");
   });
+
 });
 
 describe("Document location controls", () => {

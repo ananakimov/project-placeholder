@@ -107,13 +107,13 @@ export function CheckExceptions({ check }: { check: Check }) {
         <div className="h-[calc(100vh-320px)] min-h-[720px] overflow-hidden rounded-lg border bg-card shadow-card">
           <SidePanel check={check} row={sel} sourceIndex={0} tab={tab} onTab={setTab} />
         </div>
-        {sel && <Actions key={sel.id} check={check} row={sel} />}
+        {sel && <CheckActions key={sel.id} check={check} row={sel} />}
       </div>
     </div>
   );
 }
 
-function Actions({ check, row }: { check: Check; row: Row }) {
+export function CheckActions({ check, row, showVariants = true }: { check: Check; row: Row; showVariants?: boolean }) {
   const store = useChecks();
   const [comment, setComment] = useState(store.comments[row.id] ?? "");
   const saved = store.comments[row.id];
@@ -148,14 +148,14 @@ function Actions({ check, row }: { check: Check; row: Row }) {
           <Flag className={cn("h-4 w-4", flagged && "text-discrepancy")} />{" "}
           {flagged ? "Снять флаг" : "Флаг: нужна ручная проверка"}
         </Button>
-        {fix && !row.manual && (
+        {showVariants && fix && !row.manual && (
           <Button variant="outline" onClick={() => setFixOpen(true)}>
             <PencilLine className="h-4 w-4" /> Исправить значение
           </Button>
         )}
       </div>
 
-      {picks.length > 0 && (
+      {showVariants && picks.length > 0 && (
         <div className="space-y-2">
           <Label className="text-[13px]">Выбрать документ</Label>
           <RadioGroup
@@ -213,7 +213,7 @@ function Actions({ check, row }: { check: Check; row: Row }) {
         </Button>
       </div>
 
-      {fix && (
+      {showVariants && fix && (
         <FixDialog
           open={fixOpen}
           onOpenChange={setFixOpen}

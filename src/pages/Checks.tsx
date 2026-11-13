@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { checkDate, type Check } from "@/data/mock";
+import { type Check } from "@/data/mock";
 import { useChecks } from "@/context/ChecksContext";
 import { cn } from "@/lib/utils";
 export function countByStatus(c: Check) {
@@ -65,11 +65,11 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
         .sort((a, b) =>
           sort === "name"
             ? a.title.localeCompare(b.title, "ru")
-            : checkDate(b)
+            : b.date
                 .split(".")
                 .reverse()
                 .join("")
-                .localeCompare(checkDate(a).split(".").reverse().join("")),
+                .localeCompare(a.date.split(".").reverse().join("")),
         ),
     [checks, q, filter, sort],
   );
@@ -256,7 +256,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                               : `${n.unverified} показателей без подтверждения`}
                       </small>
                     </td>
-                    <td className="date-cell">{checkDate(c)}</td>
+                    <td className="date-cell">{c.date}</td>
                     <td>
                       <Link
                         to="/checks/$id"

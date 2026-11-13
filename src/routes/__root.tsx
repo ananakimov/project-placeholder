@@ -12,7 +12,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { AppShell } from "../components/layout/AppShell";
-import { RoleProvider } from "../context/RoleContext";
 import { ChecksProvider } from "../context/ChecksContext";
 import { Toaster } from "../components/ui/sonner";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -127,14 +126,12 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <RoleProvider>
-        <ChecksProvider>
-          <AppShell>
-            <Outlet />
-          </AppShell>
-          <Toaster position="bottom-right" />
-        </ChecksProvider>
-      </RoleProvider>
+      <ChecksProvider>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+        <Toaster position="bottom-right" />
+      </ChecksProvider>
     </QueryClientProvider>
   );
 }

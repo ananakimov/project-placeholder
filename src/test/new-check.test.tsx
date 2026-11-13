@@ -7,15 +7,15 @@ import { checks } from "@/data/mock";
 const navigate = vi.hoisted(() => vi.fn());
 vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
 
-function JournalProbe() {
+function CheckProbe() {
   const { getCheck } = useChecks();
-  return <output data-testid="journal">{JSON.stringify(getCheck("g")?.log)}</output>;
+  return <output data-testid="check">{JSON.stringify(getCheck("g"))}</output>;
 }
 function setup(sampleReport = false) {
   const result = render(
     <ChecksProvider>
       <NewCheck />
-      <JournalProbe />
+      <CheckProbe />
     </ChecksProvider>,
   );
   if (sampleReport) fireEvent.click(screen.getByRole("button", { name: "Загрузить пример" }));
@@ -46,13 +46,13 @@ describe("Two-step new check", () => {
     expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
   });
 
-  it("launches the example directly to g without modifying its journal", () => {
+  it("launches the example directly to g without modifying its data or date", () => {
     setup(true);
     fireEvent.click(screen.getByRole("button", { name: "Загрузить пример" }));
     expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeEnabled();
     launchAndCheck();
-    expect(JSON.parse(screen.getByTestId("journal").textContent ?? "[]")).toEqual(
-      checks.find((check) => check.id === "g")?.log,
+    expect(JSON.parse(screen.getByTestId("check").textContent ?? "null")).toEqual(
+      JSON.parse(JSON.stringify(checks.find((check) => check.id === "g"))),
     );
   });
 
@@ -60,6 +60,7 @@ describe("Two-step new check", () => {
     const { container } = render(
       <ChecksProvider>
         <NewCheck />
+        <CheckProbe />
       </ChecksProvider>,
     );
     const reportInput = container.querySelector('input[type="file"]');
@@ -75,6 +76,9 @@ describe("Two-step new check", () => {
     });
     expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeEnabled();
     launchAndCheck();
+    expect(JSON.parse(screen.getByTestId("check").textContent ?? "null")).toEqual(
+      JSON.parse(JSON.stringify(checks.find((check) => check.id === "g"))),
+    );
   });
 
   it("disables launch again after the last document is removed", () => {

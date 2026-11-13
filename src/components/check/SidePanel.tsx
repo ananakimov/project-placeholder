@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bookmark, ChevronLeft, ChevronRight, MousePointerClick } from "lucide-react";
 import type { Check, Row, SourceRef } from "@/data/mock";
-import type { AiRef } from "@/data/aiAnswers";
 import { AiExplainPanel } from "./AiExplainPanel";
 import { RULES, RULESET_VERSION, RULE_TOLERANCE } from "@/data/rules";
 import { SourceViewer } from "./SourceViewer";
@@ -39,20 +38,15 @@ function SelectedPanel({
   onTab,
 }: Props & { row: Row }) {
   const [localIndex, setLocalIndex] = useState(sourceIndex);
-  const [override, setOverride] = useState<SourceRef | null>(null);
   const documentTabs = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setLocalIndex(sourceIndex);
-    setOverride(null);
   }, [sourceIndex]);
-  useEffect(() => {
-    setOverride(null);
-  }, [focusedSource]);
   const index = Math.min(
     onSourceChange ? sourceIndex : localIndex,
     Math.max(0, row.sources.length - 1),
   );
-  const source = override ?? focusedSource ?? row.sources[index] ?? null;
+  const source = focusedSource ?? row.sources[index] ?? null;
   const doc = source ? (check.docs.find((d) => d.id === source.docId) ?? null) : null;
   const rule = RULES[row.ruleId];
   useEffect(() => {
@@ -62,33 +56,13 @@ function SelectedPanel({
     list.scrollTo({ left: active.offsetLeft - list.offsetLeft - 8, behavior: "smooth" });
   }, [index, tab]);
   function choose(next: number) {
-    setOverride(null);
     setLocalIndex(next);
     onSourceChange?.(next);
     onTab("source");
   }
-  const openRef = (ref: AiRef) => {
-    const idx = row.sources.findIndex((s) => s.docId === ref.docId && s.page === ref.page);
-    if (idx >= 0) {
-      choose(idx);
-      return;
-    }
-    const d = check.docs.find((d) => d.id === ref.docId);
-    const f =
-      d?.fields.find((f) => f.label === "Сумма" && f.page === ref.page) ??
-      d?.fields.find((f) => f.page === ref.page);
-    setOverride({
-      docId: ref.docId,
-      page: ref.page,
-      bbox: f?.bbox ?? [0.05, 0.05, 0.9, 0.9],
-      text: f ? `${f.label}: ${f.value}` : (d?.title ?? ref.label),
-      amount: null,
-      matchType: "точное",
-    });
-    onTab("source");
-  };
+  const hasExplanation = row.status !== "verified";
   return (
-    <Tabs value={tab} onValueChange={(v) => onTab(v as PanelTab)} className="evidence-panel">
+    <Tabs value={tab === "why" && !hasExplanation ? "source" : tab} onValueChange={(v) => onTab(v as PanelTab)} className="evidence-panel">
       <div className="evidence-header">
         <div className="evidence-heading">
           <h2>{row.name}</h2>
@@ -114,13 +88,13 @@ function SelectedPanel({
         </div>
       </div>
       <TabsList className="evidence-tabs">
-        <TabsTrigger value="source">Документ</TabsTrigger>
-        <TabsTrigger value="why">Объяснение</TabsTrigger>
+        <TabsTrigger value="source">Источник</TabsTrigger>
+        {hasExplanation && <TabsTrigger value="why">Объяснение и рекомендация</TabsTrigger>}
         <TabsTrigger value="rule">Правило проверки</TabsTrigger>
       </TabsList>
       <TabsContent value="source" className="evidence-source-content">
         <Tabs
-          value={override ? "override" : String(index)}
+          value={String(index)}
           onValueChange={(value) => choose(Number(value))}
           className="source-tabs"
         >
@@ -128,7 +102,7 @@ function SelectedPanel({
             <div className="document-picker">
               <button
                 aria-label="Предыдущий документ"
-                disabled={index === 0 || !!override}
+                disabled={index === 0}
                 onClick={() => choose(index - 1)}
               >
                 <ChevronLeft size={16} />
@@ -138,12 +112,6 @@ function SelectedPanel({
                 className="document-tabs"
                 aria-label="Документы показателя"
               >
-                {override && (
-                  <TabsTrigger value="override">
-                    <Bookmark size={15} />
-                    <span>{doc?.title ?? "Источник из объяснения"}</span>
-                  </TabsTrigger>
-                )}
                 {row.sources.map((s, i) => {
                   const title = check.docs.find((d) => d.id === s.docId)?.title ?? s.docId;
                   return (
@@ -161,7 +129,7 @@ function SelectedPanel({
               </TabsList>
               <button
                 aria-label="Следующий документ"
-                disabled={index >= row.sources.length - 1 || !!override}
+                disabled={index >= row.sources.length - 1}
                 onClick={() => choose(index + 1)}
               >
                 <ChevronRight size={16} />
@@ -169,7 +137,7 @@ function SelectedPanel({
             </div>
           )}
           <TabsContent
-            value={override ? "override" : String(index)}
+            value={String(index)}
             className="source-document-content"
           >
             {row.sources.length > 1 && (
@@ -184,14 +152,11 @@ function SelectedPanel({
           </TabsContent>
         </Tabs>
       </TabsContent>
-      <TabsContent value="why" className="evidence-text-content">
-        <div className="reason-note">
-          <strong>Результат сверки</strong>
-          <p>{row.reason}</p>
-          {row.partialNote && <p>{row.partialNote}</p>}
-        </div>
-        <AiExplainPanel check={check} row={row} onOpenRef={openRef} />
-      </TabsContent>
+      {hasExplanation && (
+        <TabsContent value="why" className="evidence-text-content">
+          <AiExplainPanel row={row} />
+        </TabsContent>
+      )}
       <TabsContent value="rule" className="evidence-text-content">
         <h3 className="mb-4 text-sm font-medium">Основание результата</h3>
         <dl className="evidence-rules">

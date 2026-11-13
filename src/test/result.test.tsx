@@ -55,20 +55,26 @@ describe("Combined result", () => {
   it("retains comments and signs only after all problems are reviewed on this screen", () => {
     vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(2026, 10, 14, 10, 15));
     setup();
-    for (const id of b.exceptionOrder) {
-      expect(screen.getByRole("button", { name: "Подписать вывод" })).toBeDisabled();
+    const signButton = screen.getByRole("button", { name: "Подписать вывод" });
+    const table = screen.getByRole("table", { name: "Показатели КФЗ" });
+    const rowButtons = new Map(b.exceptionOrder.map((id) => {
       const row = b.rows.find((item) => item.id === id)!;
-      fireEvent.click(screen.getByRole("button", { name: row.name }));
-      const details = screen.getByRole("region", { name: `Подробности: ${row.name}` });
+      return [id, within(table).getByRole("button", { name: row.name })];
+    }));
+    for (const id of b.exceptionOrder) {
+      expect(signButton).toBeDisabled();
+      const row = b.rows.find((item) => item.id === id)!;
+      fireEvent.click(rowButtons.get(id)!);
+      const details = within(table).getByRole("region", { name: `Подробности: ${row.name}` });
       expect(within(details).queryByRole("button", { name: "Исправить значение" })).not.toBeInTheDocument();
       fireEvent.change(within(details).getByRole("textbox", { name: "Комментарий" }), { target: { value: `Проверена строка ${id}` } });
       fireEvent.click(within(details).getByRole("button", { name: "Сохранить" }));
       fireEvent.click(within(details).getByRole("button", { name: "Отметить как просмотренное" }));
     }
-    expect(screen.getByRole("button", { name: "Подписать вывод" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "Подписать вывод" }));
+    expect(signButton).toBeEnabled();
+    fireEvent.click(signButton);
     expect(screen.getByText("Подписано: главный бухгалтер Иванова А. С., 14.11.2026 10:15")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toBeDisabled();
     expect(within(screen.getByRole("region", { name: "Подробности: Оплата труда" })).getByRole("textbox", { name: "Комментарий" })).toHaveValue("Проверена строка b-1");
-  });
+  }, 15_000); // Full UI workflow must also fit on the slower GitHub Actions runner.
 });

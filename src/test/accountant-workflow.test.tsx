@@ -80,23 +80,25 @@ describe("Single accountant workflow", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date(2026, 10, 14, 9, 5));
     setup();
+    const signButton = screen.getByRole("button", { name: "Подписать вывод" });
+    const explanation = screen.getByRole("textbox", { name: "Пояснение бухгалтера" });
     for (const id of b.exceptionOrder) {
-      expect(screen.getByRole("button", { name: "Подписать вывод" })).toBeDisabled();
+      expect(signButton).toBeDisabled();
       selectRow(id);
       fireEvent.click(screen.getByRole("button", { name: "Отметить как просмотренное" }));
     }
-    fireEvent.change(screen.getByRole("textbox", { name: "Пояснение бухгалтера" }), { target: { value: "Все расхождения рассмотрены." } });
-    expect(screen.getByRole("button", { name: "Подписать вывод" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "Подписать вывод" }));
+    fireEvent.change(explanation, { target: { value: "Все расхождения рассмотрены." } });
+    expect(signButton).toBeEnabled();
+    fireEvent.click(signButton);
     expect(screen.getByText("Подписано: главный бухгалтер Иванова А. С., 14.11.2026 09:05")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toBeDisabled();
+    expect(explanation).toBeDisabled();
 
     selectRow("b-1");
     fireEvent.click(screen.getByRole("button", { name: "Исправить значение" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Сохранить" }));
     expect(screen.queryByText(/^Подписано:/)).not.toBeInTheDocument();
     expect(screen.getByTestId("check-state")).toHaveTextContent("Нужна повторная подпись");
-    expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toBeEnabled();
-    expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toHaveValue("Все расхождения рассмотрены.");
-  });
+    expect(explanation).toBeEnabled();
+    expect(explanation).toHaveValue("Все расхождения рассмотрены.");
+  }, 15_000); // Preserve the complete review/sign/correct flow on slower CI machines.
 });

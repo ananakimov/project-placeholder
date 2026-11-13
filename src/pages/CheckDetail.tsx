@@ -9,7 +9,7 @@ import { ExcludedDocs } from "@/components/check/ExcludedDocs";
 import { CheckConclusion } from "@/pages/CheckConclusion";
 import { CheckActions } from "@/pages/CheckExceptions";
 import { countByStatus } from "@/pages/Checks";
-import type { Check as CheckData, Row, Status } from "@/data/mock";
+import type { Breakdown, Check as CheckData, Row, Status } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { formatMoney, sumMoney } from "@/components/money-format";
 
@@ -136,12 +136,17 @@ function Reconciliation({ check }: { check: CheckData }) {
                     <span className="row-status" data-status={row.status} role="img" aria-label={row.status === "verified" ? "Подтверждено" : row.status === "discrepancy" ? "Расхождение" : "Нет данных"}>{row.status === "verified" ? <Check size={13} /> : row.status === "discrepancy" ? "!" : "−"}</span>
                     <button className="row-name-button" aria-pressed={selected?.id === row.id} aria-expanded={isExpanded} aria-controls={`details-${row.id}`} onClick={(event) => { event.stopPropagation(); toggleRow(row.id); }}>{row.name}</button>
                   </div><div className="indicator-meta"><span>{row.sources.length ? `${row.sources.length} док.` : "Нет источника"}</span>{row.manual && <span>Вручную</span>}{row.service && <span>Итоговая строка</span>}</div></td>
-                  <td>{row.unit ? <span>{row.reported}<small>{row.unit}</small></span> : <Money value={row.reported} />}</td>
+                  <td>{row.unit ? <span>{formatMoney(row.reported)}<small>{row.unit}</small></span> : <Money value={row.reported} />}</td>
                   <td className="expected-cell"><Money value={row.expected} />{row.partialNote && <small>Частично подтверждено</small>}</td>
                   <td className={cn("difference-cell", row.status === "discrepancy" && "delta-cell")}><Money value={row.delta} /></td>
                 </tr>
                 {isExpanded && <tr><td colSpan={4} className="!p-0 !text-left"><div id={`details-${row.id}`} role="region" aria-label={`Подробности: ${row.name}`} className="space-y-4 border-b bg-card p-5">
+                  {row.breakdown && <section aria-label={`В том числе: ${row.name}`}>
+                    <h3 className="mb-3 text-sm font-medium">В том числе — по КФЗ</h3>
+                    <BreakdownList items={row.breakdown} />
+                  </section>}
                   <RowDocuments row={row} check={check} onOpen={(index, trigger) => openSource(row.id, index, trigger)} />
+                  {row.partialNote && <p className="text-sm text-muted-foreground">{row.partialNote}</p>}
                   {row.status !== "verified" && <>
                     <p className="text-sm"><strong>Категория: </strong>{row.category ?? "Недостаточно данных"}</p>
                     <AiExplainPanel row={row} />
@@ -171,6 +176,16 @@ function Reconciliation({ check }: { check: CheckData }) {
       </CheckConclusion>
     </div>
   );
+}
+
+function BreakdownList({ items }: { items: Breakdown[] }) {
+  return <dl className="space-y-3 border-l pl-4 text-sm">
+    {items.map((item) => <div key={item.name}>
+      <div className="flex items-start justify-between gap-4"><dt>{item.name}</dt><dd className="shrink-0"><Money value={item.reported} /> ₽</dd></div>
+      {item.note && <p className="mt-1 text-xs text-muted-foreground">{item.note}</p>}
+      {item.children && <div className="mt-3"><BreakdownList items={item.children} /></div>}
+    </div>)}
+  </dl>;
 }
 
 function RowDocuments({ row, check, onOpen }: { row: Row; check: CheckData; onOpen: (index: number, trigger: HTMLElement) => void }) {

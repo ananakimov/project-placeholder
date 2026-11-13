@@ -53,8 +53,9 @@ describe("Rule explanations", () => {
   });
 
   it("distinguishes the unconfirmed article from its difference and removes AI labels from drafts", () => {
-    expect(EXPLANATION_DRAFTS["g"]).toContain("не подтверждена статья 0800: 415 600,00 ₽ (15,3%), расхождение 10 500,00 ₽");
-    expect(EXPLANATION_DRAFTS["g"]).toContain("2 300 300,00 ₽ (84,7%)");
+    expect(EXPLANATION_DRAFTS["g"]).toContain("Статьи с расхождениями: 2 089 800,00 ₽ (26,73%)");
+    expect(EXPLANATION_DRAFTS["g"]).toContain("статья 0300 завышена на 14 800,00 ₽, статья 0800 занижена на 25 000,00 ₽");
+    expect(EXPLANATION_DRAFTS["g"]).toContain("5 600 000,00 ₽ (71,63%)");
     for (const draft of [...Object.values(EXPLANATION_DRAFTS), ...Object.values(REQUEST_DRAFTS)]) {
       expect(draft).not.toContain("ИИ");
     }

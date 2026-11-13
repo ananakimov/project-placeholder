@@ -92,8 +92,8 @@ describe("Single-screen new check", () => {
   });
   it("keeps the stage metadata and identifies the attached synthetic KFZ", () => {
     expect(checks.find((check) => check.id === "g")).toMatchObject({
-      reportRow: "Этап 3, 2026 г.", kfzNumber: "3/7", synthetic: true,
-      contract: "СИН-2026/15", period: "01.01.2026–31.05.2026",
+      reportRow: "3 этап, 2027 г.", kfzNumber: "3/7", synthetic: true,
+      contract: "SYN-27/04-018", period: "01.01.2027–31.05.2027",
     });
     for (const id of ["a", "b", "c"]) expect(checks.find((check) => check.id === id)).toMatchObject({ reportRow: "2 этап, 2026 г.", kfzNumber: "б/н", synthetic: true });
   });

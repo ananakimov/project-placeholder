@@ -6,6 +6,7 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@
 import { SidePanel, type PanelTab } from "@/components/check/SidePanel";
 import { AiExplainPanel } from "@/components/check/AiExplainPanel";
 import { ExcludedDocs } from "@/components/check/ExcludedDocs";
+import { CheckConclusion } from "@/pages/CheckConclusion";
 import { CheckActions } from "@/pages/CheckExceptions";
 import { countByStatus } from "@/pages/Checks";
 import type { Check as CheckData, Row, Status } from "@/data/mock";
@@ -25,6 +26,7 @@ function Reconciliation({ check }: { check: CheckData }) {
   const [tab, setTab] = useState<PanelTab>("source");
   const [focus, setFocus] = useState(false);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const n = countByStatus(check);
   const total = n.verified + n.discrepancy + n.unverified;
   const discrepancies = check.rows.filter((row) => !row.service && row.status === "discrepancy");
@@ -50,6 +52,19 @@ function Reconciliation({ check }: { check: CheckData }) {
     window.addEventListener("keydown", close);
     return () => { document.body.style.overflow = before; window.removeEventListener("keydown", close); };
   }, [focus]);
+  useEffect(() => {
+    if (!scrollTarget) return;
+    const target = document.getElementById(`indicator-${scrollTarget}`);
+    target?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    target?.focus({ preventScroll: true });
+    setScrollTarget(null);
+  }, [scrollTarget, rows]);
+  function openProblem(rowId: string) {
+    setQuery(""); setFilter("all");
+    setSelection({ rowId, sourceIndex: 0 });
+    setExpanded((previous) => new Set(previous).add(rowId));
+    setScrollTarget(rowId);
+  }
   function toggleRow(rowId: string) {
     setSelection({ rowId, sourceIndex: 0 });
     setExpanded((previous) => {
@@ -72,6 +87,7 @@ function Reconciliation({ check }: { check: CheckData }) {
     setQuery(""); setFilter("discrepancy");
     setSelection({ rowId: row.id, sourceIndex: 0 });
     setExpanded((previous) => new Set(previous).add(row.id));
+    setScrollTarget(row.id);
   }
   const filters: { value: Filter; label: string; count: number }[] = [
     { value: "all", label: "Все", count: total },
@@ -81,12 +97,7 @@ function Reconciliation({ check }: { check: CheckData }) {
   ];
   return (
     <div className="reconciliation-page">
-      <div className="reconcile-summary">
-        <div><span className="summary-dot" />Подтверждено <strong>{check.coverage.verifiedPct.replace(".", ",")}%</strong> суммы отчёта</div>
-        <div className="mini-coverage"><i style={{ width: `${check.coverage.verifiedPct}%` }} /><i style={{ width: `${check.coverage.discrepancyPct}%` }} /><i style={{ width: `${check.coverage.unverifiedPct}%` }} /></div>
-        <span>Всего <Money value={check.coverage.totalSum} /> ₽</span>
-        <span className="summary-docs"><FileText size={14} />{check.docs.length} документов</span>
-      </div>
+      <CheckConclusion check={check} onProblemSelect={openProblem}>
       <section className={cn("min-w-0 bg-card", focus && "reconcile-focus overflow-auto p-4")} aria-label="Рабочее место сверки"
         onKeyDown={(event) => {
           if ((event.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
@@ -134,7 +145,7 @@ function Reconciliation({ check }: { check: CheckData }) {
                   {row.status !== "verified" && <>
                     <p className="text-sm"><strong>Категория: </strong>{row.category ?? "Недостаточно данных"}</p>
                     <AiExplainPanel row={row} />
-                    {!row.service && <CheckActions check={check} row={row} showVariants={false} />}
+                    <CheckActions check={check} row={row} showVariants={false} />
                   </>}
                 </div></td></tr>}
               </Fragment>;
@@ -157,6 +168,7 @@ function Reconciliation({ check }: { check: CheckData }) {
           </div>
         </SheetContent>
       </Sheet>
+      </CheckConclusion>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Copy, FileWarning, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ function Card({
   );
 }
 
-export function CheckConclusion({ check }: { check: Check }) {
+export function CheckConclusion({ check, onProblemSelect, children }: { check: Check; onProblemSelect?: (rowId: string) => void; children?: ReactNode }) {
   const store = useChecks();
   const signature = store.signature[check.id] ?? null;
   const [text, setText] = useState(store.explanations[check.id] ?? "");
@@ -80,9 +80,10 @@ export function CheckConclusion({ check }: { check: Check }) {
 
   return (
     <div className="conclusion-page space-y-5">
+      <section aria-label="Заключение по проверке" className="space-y-5">
       <div>
         <div className="text-[13px] text-muted-foreground">Вывод по проверке</div>
-        <div className={cn("conclusion-title", color[check.conclusion])}>{check.conclusion}</div>
+        <h2 className={cn("conclusion-title", color[check.conclusion])}>{check.conclusion}</h2>
         {CONCLUSION_SUMMARY[check.id] && check.conclusion === "Недостоверен" && (
           <p className="mt-2 max-w-[820px] text-[15px] tabular-nums">
             {CONCLUSION_SUMMARY[check.id]}
@@ -94,7 +95,14 @@ export function CheckConclusion({ check }: { check: Check }) {
         </p>
       </div>
 
-      <div className="conclusion-grid grid grid-cols-2 gap-4">
+      <dl aria-label="Счётчики показателей" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {([["Подтверждено", n.verified, "text-verified"], ["Расхождения", n.discrepancy, "text-discrepancy"], ["Не проверено", n.unverified, "text-unverified"]] as const).map(([label, value, textColor]) => (
+          <div key={label} className="rounded-lg border bg-card p-4">
+            <dt className="text-sm text-muted-foreground">{label}</dt><dd className={cn("mt-1 text-2xl font-medium tabular-nums", textColor)}>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="conclusion-grid grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card title="Покрытие">
           <div className="space-y-4 text-[13px]">
             <div>
@@ -182,6 +190,12 @@ export function CheckConclusion({ check }: { check: Check }) {
                       <TableRow key={i.category} className="hover:bg-transparent">
                         <TableCell className="py-1.5">
                           {i.category}
+                          {onProblemSelect && <div className="flex flex-wrap gap-x-3 gap-y-1">
+                            {i.rowIds.map((rowId) => {
+                              const row = check.rows.find((item) => item.id === rowId);
+                              return row && <button key={rowId} className="text-left text-primary underline underline-offset-2" aria-label={`Перейти к строке: ${row.name}`} onClick={() => onProblemSelect(rowId)}>{row.name}</button>;
+                            })}
+                          </div>}
                           {i.note && (
                             <div className="text-[11px] text-muted-foreground">{i.note}</div>
                           )}
@@ -202,6 +216,9 @@ export function CheckConclusion({ check }: { check: Check }) {
           </p>
         </Card>
       </div>
+
+      </section>
+      {children}
 
       <Card
         title="Недостающие документы"
@@ -254,7 +271,7 @@ export function CheckConclusion({ check }: { check: Check }) {
       <section data-print-card className="flex items-center gap-4">
         {signature ? (
           <div className="rounded-lg border border-verified/30 bg-verified-bg px-4 py-3 text-sm text-verified tabular-nums">
-            Подписано: {signature.by}, {signature.at}
+            Подписано: главный бухгалтер {signature.by}, {signature.at}
           </div>
         ) : (
           <div className="flex items-center gap-4" data-print-hide>

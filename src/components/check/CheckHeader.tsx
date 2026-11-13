@@ -8,10 +8,8 @@ import { useState } from "react";
 import { ExportDialog } from "./ExportDialog";
 
 const tabs = [
-  { to: "/checks/$id", label: "Показатели", exact: true },
-  { to: "/checks/$id/exceptions", label: "Разбор расхождений" },
+  { to: "/checks/$id", label: "Результат", exact: true },
   { to: "/checks/$id/documents", label: "Документы" },
-  { to: "/checks/$id/conclusion", label: "Заключение" },
 ] as const;
 
 export function CheckHeader({ check }: { check: Check }) {
@@ -50,7 +48,7 @@ export function CheckHeader({ check }: { check: Check }) {
           <ExportDialog check={check} open={exportOpen} onOpenChange={setExportOpen} />
         </div>
       </div>
-      <div className="check-tabs mt-6 flex gap-6 border-b" data-print-hide>
+      <nav aria-label="Разделы проверки" className="check-tabs mt-6 flex gap-6 border-b" data-print-hide>
         {tabs.map((t) => (
           <Link
             key={t.to}
@@ -63,7 +61,7 @@ export function CheckHeader({ check }: { check: Check }) {
             {t.label}
           </Link>
         ))}
-      </div>
+      </nav>
     </div>
   );
 }

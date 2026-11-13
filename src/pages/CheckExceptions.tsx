@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { CheckCheck, CheckCircle2, Flag, PencilLine, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -115,6 +115,7 @@ export function CheckExceptions({ check }: { check: Check }) {
 
 export function CheckActions({ check, row, showVariants = true }: { check: Check; row: Row; showVariants?: boolean }) {
   const store = useChecks();
+  const commentId = useId();
   const [comment, setComment] = useState(store.comments[row.id] ?? "");
   const saved = store.comments[row.id];
   useEffect(() => {
@@ -192,11 +193,11 @@ export function CheckActions({ check, row, showVariants = true }: { check: Check
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="comment" className="text-[13px]">
+        <Label htmlFor={commentId} className="text-[13px]">
           Комментарий
         </Label>
         <Textarea
-          id="comment"
+          id={commentId}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={2}

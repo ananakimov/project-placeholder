@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckConclusion } from "@/pages/CheckConclusion";
+import { CheckDetail } from "@/pages/CheckDetail";
 import { useChecks } from "@/context/ChecksContext";
 
 export const Route = createFileRoute("/checks/$id/conclusion")({
@@ -7,6 +7,6 @@ export const Route = createFileRoute("/checks/$id/conclusion")({
   component: () => {
     const { id } = Route.useParams();
     const check = useChecks().getCheck(id);
-    return check ? <CheckConclusion key={check.id} check={check} /> : null;
+    return check ? <CheckDetail key={check.id} check={check} /> : null;
   },
 });

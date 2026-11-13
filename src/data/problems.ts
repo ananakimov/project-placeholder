@@ -1,32 +1,32 @@
 /** Статичные итоги автоматической проверки. После ручных правок не пересчитываются. */
-export type ProblemBlock = { title: string; items: { category: string; rows: number; sum: string | null; note?: string }[] };
+export type ProblemBlock = { title: string; items: { category: string; rowIds: string[]; rows: number; sum: string | null; note?: string }[] };
 
 export const PROBLEMS: Record<string, ProblemBlock[]> = {
   a: [],
   b: [{
     title: "Расхождения (сумма Δ)",
     items: [
-      { category: "сумма", rows: 2, sum: "5180.00", note: "Б1 5 000,00 + Б8 180,00" },
-      { category: "дубль", rows: 1, sum: "280000.00", note: "Б4" },
-      { category: "период", rows: 1, sum: "96400.00", note: "Б5" },
-      { category: "договор/связь", rows: 1, sum: "9600.00", note: "Б9" },
+      { category: "сумма", rowIds: ["b-1", "b-8"], rows: 2, sum: "5180.00", note: "Б1 5 000,00 + Б8 180,00" },
+      { category: "дубль", rowIds: ["b-4"], rows: 1, sum: "280000.00", note: "Б4" },
+      { category: "период", rowIds: ["b-5"], rows: 1, sum: "96400.00", note: "Б5" },
+      { category: "договор/связь", rowIds: ["b-9"], rows: 1, sum: "9600.00", note: "Б9" },
     ],
   }],
   c: [{
     title: "Не проверено (сумма в отчёте)",
     items: [
-      { category: "пропущен документ", rows: 3, sum: "1192300.00", note: "В1, В4, В8" },
-      { category: "документ не прочитан", rows: 1, sum: "133800.00", note: "В5" },
-      { category: "неоднозначная связь", rows: 1, sum: "90000.00", note: "В7" },
+      { category: "пропущен документ", rowIds: ["c-1", "c-4", "c-8"], rows: 3, sum: "1192300.00", note: "В1, В4, В8" },
+      { category: "документ не прочитан", rowIds: ["c-5"], rows: 1, sum: "133800.00", note: "В5" },
+      { category: "неоднозначная связь", rowIds: ["c-7"], rows: 1, sum: "90000.00", note: "В7" },
     ],
   }],
   g: [
-    { title: "Расхождения (сумма Δ)", items: [{ category: "сумма", rows: 1, sum: "10500.00", note: "g-3 (0800): отчёт завышен" }] },
-    { title: "Не проверено", items: [{ category: "нет подтверждающих документов", rows: 2, sum: null, note: "g-5 трудоёмкость 1 840 чел.-ч; g-6 резерв отпусков 96 000,00 (внутри 0200)" }] },
+    { title: "Расхождения (сумма Δ)", items: [{ category: "сумма", rowIds: ["g-3"], rows: 1, sum: "10500.00", note: "g-3 (0800): отчёт завышен" }] },
+    { title: "Не проверено", items: [{ category: "нет подтверждающих документов", rowIds: ["g-5", "g-6"], rows: 2, sum: null, note: "g-5 трудоёмкость 1 840 чел.-ч; g-6 резерв отпусков 96 000,00 (внутри 0200)" }] },
     { title: "Исключено из расчёта (не расхождение)", items: [
-      { category: "дубль", rows: 1, sum: "142500.00", note: "Акт АД-12 (копия), R-DUP-01" },
-      { category: "вне периода", rows: 1, sum: "57000.00", note: "Акт ОР-0603, R-PER-01" },
-      { category: "другой договор", rows: 1, sum: "64000.00", note: "Акт АД-31, R-KEY-01" },
+      { category: "дубль", rowIds: ["g-4"], rows: 1, sum: "142500.00", note: "Акт АД-12 (копия), R-DUP-01" },
+      { category: "вне периода", rowIds: ["g-4"], rows: 1, sum: "57000.00", note: "Акт ОР-0603, R-PER-01" },
+      { category: "другой договор", rowIds: ["g-4"], rows: 1, sum: "64000.00", note: "Акт АД-31, R-KEY-01" },
     ] },
   ],
 };

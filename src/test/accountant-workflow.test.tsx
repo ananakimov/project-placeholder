@@ -88,7 +88,7 @@ describe("Single accountant workflow", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Пояснение бухгалтера" }), { target: { value: "Все расхождения рассмотрены." } });
     expect(screen.getByRole("button", { name: "Подписать вывод" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Подписать вывод" }));
-    expect(screen.getByText("Подписано: Иванова А. С., 14.11.2026 09:05")).toBeInTheDocument();
+    expect(screen.getByText("Подписано: главный бухгалтер Иванова А. С., 14.11.2026 09:05")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toBeDisabled();
 
     selectRow("b-1");

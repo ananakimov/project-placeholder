@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { CheckCheck, CheckCircle2, Flag, PencilLine, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
@@ -107,14 +107,15 @@ export function CheckExceptions({ check }: { check: Check }) {
         <div className="h-[calc(100vh-320px)] min-h-[720px] overflow-hidden rounded-lg border bg-card shadow-card">
           <SidePanel check={check} row={sel} sourceIndex={0} tab={tab} onTab={setTab} />
         </div>
-        {sel && <Actions key={sel.id} check={check} row={sel} />}
+        {sel && <CheckActions key={sel.id} check={check} row={sel} />}
       </div>
     </div>
   );
 }
 
-function Actions({ check, row }: { check: Check; row: Row }) {
+export function CheckActions({ check, row, showVariants = true }: { check: Check; row: Row; showVariants?: boolean }) {
   const store = useChecks();
+  const commentId = useId();
   const [comment, setComment] = useState(store.comments[row.id] ?? "");
   const saved = store.comments[row.id];
   useEffect(() => {
@@ -148,14 +149,14 @@ function Actions({ check, row }: { check: Check; row: Row }) {
           <Flag className={cn("h-4 w-4", flagged && "text-discrepancy")} />{" "}
           {flagged ? "Снять флаг" : "Флаг: нужна ручная проверка"}
         </Button>
-        {fix && !row.manual && (
+        {showVariants && fix && !row.manual && (
           <Button variant="outline" onClick={() => setFixOpen(true)}>
             <PencilLine className="h-4 w-4" /> Исправить значение
           </Button>
         )}
       </div>
 
-      {picks.length > 0 && (
+      {showVariants && picks.length > 0 && (
         <div className="space-y-2">
           <Label className="text-[13px]">Выбрать документ</Label>
           <RadioGroup
@@ -192,11 +193,11 @@ function Actions({ check, row }: { check: Check; row: Row }) {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="comment" className="text-[13px]">
+        <Label htmlFor={commentId} className="text-[13px]">
           Комментарий
         </Label>
         <Textarea
-          id="comment"
+          id={commentId}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
           rows={2}
@@ -213,7 +214,7 @@ function Actions({ check, row }: { check: Check; row: Row }) {
         </Button>
       </div>
 
-      {fix && (
+      {showVariants && fix && (
         <FixDialog
           open={fixOpen}
           onOpenChange={setFixOpen}

@@ -17,13 +17,13 @@ describe("mock checks", () => {
     const u = checks.find((c) => c.id === "c")!.rows.filter((r) => r.status === "unverified");
     expect(u.every((r) => r.expected === null && r.delta === null)).toBe(true);
   });
-  it("check g: 3 verified / 1 discrepancy / 2 unverified, 23 docs, 3 excluded", () => {
+  it("check g: 2 verified / 2 discrepancies / 2 unverified, 23 docs, 3 excluded", () => {
     const g = checks.find((c) => c.id === "g")!;
-    expect(countByStatus(g)).toEqual({ verified: 3, discrepancy: 1, unverified: 2 });
+    expect(countByStatus(g)).toEqual({ verified: 2, discrepancy: 2, unverified: 2 });
     expect(g.docs.length).toBe(23);
     expect(g.excluded.map((e) => e.reason)).toEqual(["дубль", "вне периода", "другой договор"]);
     expect(g.rows.find((r) => r.id === "g-4")).toMatchObject({ status: "verified", delta: "0.00" });
     expect(g.rows.filter((r) => r.status === "unverified").every((r) => r.expected === null && r.delta === null)).toBe(true);
-    expect(g.coverage).toMatchObject({ verifiedSum: "2300300.00", discrepancySum: "415600.00", totalSum: "2715900.00" });
+    expect(g.coverage).toMatchObject({ verifiedSum: "5600000.00", discrepancySum: "2089800.00", unverifiedSum: "128500.00", totalSum: "7818300.00" });
   });
 });

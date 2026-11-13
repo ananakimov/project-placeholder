@@ -1,0 +1,113 @@
+{
+  "synthetic": true,
+  "purpose": "Проверка синтетического набора человеком или тестом. Не вход системы обработки.",
+  "contract": "SYN-27/04-018",
+  "stage": "3",
+  "target_row": "3 этап, 2027 г.",
+  "period_start": "2027-01-01",
+  "period_end": "2027-05-31",
+  "delta_definition": "reported_amount - supported_amount",
+  "currency": "RUB",
+  "rows": [
+    {
+      "category": "payroll",
+      "label": "Оплата труда",
+      "column": 5,
+      "reported_amount": "5000000.00",
+      "supported_amount": "5000000.00",
+      "delta": "0.00",
+      "status": "verified",
+      "source_prefixes": [
+        "02_01",
+        "02_02",
+        "02_03",
+        "02_04",
+        "02_05"
+      ]
+    },
+    {
+      "category": "insurance",
+      "label": "Страховые взносы",
+      "column": 10,
+      "reported_amount": "1514800.00",
+      "supported_amount": "1500000.00",
+      "delta": "14800.00",
+      "status": "discrepancy",
+      "source_prefixes": [
+        "03_01",
+        "03_02",
+        "03_03",
+        "03_04",
+        "03_05"
+      ]
+    },
+    {
+      "category": "production_overhead",
+      "label": "Общепроизводственные расходы",
+      "column": 15,
+      "reported_amount": "575000.00",
+      "supported_amount": "600000.00",
+      "delta": "-25000.00",
+      "status": "discrepancy",
+      "source_prefixes": [
+        "04",
+        "05",
+        "06",
+        "07"
+      ]
+    },
+    {
+      "category": "general_admin",
+      "label": "Общехозяйственные расходы",
+      "column": 16,
+      "reported_amount": "600000.00",
+      "supported_amount": "600000.00",
+      "delta": "0.00",
+      "status": "verified",
+      "source_prefixes": [
+        "08",
+        "09",
+        "11",
+        "12",
+        "13"
+      ]
+    },
+    {
+      "category": "materials",
+      "label": "Материальные затраты",
+      "column": 4,
+      "reported_amount": "128500.00",
+      "supported_amount": null,
+      "delta": null,
+      "status": "unverified",
+      "source_prefixes": [],
+      "reason": "Подтверждающие документы отсутствуют."
+    }
+  ],
+  "excluded_documents": [
+    {
+      "prefix": "10",
+      "reason": "Дубликат 09. Совпадает байт в байт.",
+      "amount": "142000.00"
+    },
+    {
+      "prefix": "14",
+      "reason": "Услуги за июнь 2027 года вне отчетного периода.",
+      "amount": "117000.00"
+    },
+    {
+      "prefix": "15",
+      "reason": "Другой договор: SYN-27/04-019.",
+      "amount": "255000.00"
+    }
+  ],
+  "reported_total": "7818300.00",
+  "reported_stage_total": "8918300.00",
+  "total_status": "unverified",
+  "notes": [
+    "Не суммировать справочную строку второго этапа с итогом третьего этапа.",
+    "Детализация страховых взносов по основной и дополнительной зарплате отдельно документами не подтверждена.",
+    "Материальные затраты и трудоемкость не обеспечены отдельными подтверждениями. Отсутствие документа не означает нулевую сумму.",
+    "Контрольные значения заданы при создании набора; это не результат запуска приложения или OCR."
+  ]
+}

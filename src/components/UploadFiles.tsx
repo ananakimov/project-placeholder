@@ -42,14 +42,16 @@ export function UploadFileList({
   files,
   onRemove,
   previewTick,
+  compact = false,
 }: {
   files: UploadFile[];
   onRemove: (index: number) => void;
   previewTick: number | null;
+  compact?: boolean;
 }) {
   if (!files.length) return null;
   return (
-    <ul className="upload-file-list" aria-label="Добавленные файлы">
+    <ul className={compact ? "upload-file-list !max-h-56 !gap-2 [&_.upload-file-row]:!min-h-0 [&_.upload-file-row]:!gap-2 [&_.upload-file-row]:!p-2 [&_.upload-file-info>strong]:!text-sm [&_.upload-file-info>span]:!text-xs [&_.file-type-icon]:!h-8 [&_.file-type-icon]:!w-8 [&_.upload-percent]:hidden [&_.upload-complete-icon]:!h-5 [&_.upload-complete-icon]:!w-5 [&_.upload-file-status]:!gap-1" : "upload-file-list"} aria-label="Добавленные файлы">
       {files.map((file, i) => {
         const error = demoFileBroken(file.name);
         const progress =

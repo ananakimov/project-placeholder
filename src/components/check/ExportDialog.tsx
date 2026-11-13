@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { FileJson, FileSpreadsheet, FileText } from "lucide-react";
+import { FileJson, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { Check } from "@/data/mock";
-import { checkToCsv, checkToJson, downloadBlob } from "@/lib/export";
+import { checkToJson, downloadBlob } from "@/lib/export";
 
 export function ExportDialog({
   check,
@@ -27,20 +27,8 @@ export function ExportDialog({
       desc: "Печать страницы вывода. В окне печати выберите «Сохранить как PDF».",
       run: async () => {
         onOpenChange(false);
-        await navigate({ to: "/checks/$id/conclusion", params: { id: check.id } });
+        await navigate({ to: "/checks/$id", params: { id: check.id } });
         setTimeout(() => window.print(), 400);
-      },
-    },
-    {
-      icon: FileSpreadsheet,
-      title: "Таблица (CSV)",
-      desc: "Показатели и источники, разделитель «;», UTF-8.",
-      run: () => {
-        downloadBlob(
-          new Blob([checkToCsv(check)], { type: "text/csv;charset=utf-8" }),
-          `docheck-${check.id}.csv`,
-        );
-        onOpenChange(false);
       },
     },
     {

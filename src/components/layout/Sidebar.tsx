@@ -34,16 +34,6 @@ export function Sidebar() {
           </Link>
         ))}
       </nav>
-      <div className="sidebar-bottom">
-        <div className="profile">
-          <span className="profile-avatar">АИ</span>
-          <div>
-            <strong>Анна Иванова</strong>
-            <small>Бухгалтер</small>
-          </div>
-          <span className="online-dot" />
-        </div>
-      </div>
     </aside>
   );
 }

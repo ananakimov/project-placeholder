@@ -46,7 +46,10 @@ function selectRow(id: string) {
 describe("Single accountant workflow", () => {
   it("keeps accountant actions available and removes role and journal controls", () => {
     setup();
-    expect(screen.getByText("Бухгалтер", { exact: true })).toBeInTheDocument();
+    const sidebar = screen.getByRole("complementary");
+    expect(within(sidebar).queryByText("Бухгалтер", { exact: true })).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText("Анна Иванова")).not.toBeInTheDocument();
+    expect(within(sidebar).queryByText("АИ", { exact: true })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("КФЗ № б/н · 2 этап, 2026 г.");
     expect(screen.getByText("Синтетика")).toBeInTheDocument();
     expect(screen.getByText("Договор СИН-2026/12 · Период 01.06.2026–30.09.2026")).toBeInTheDocument();

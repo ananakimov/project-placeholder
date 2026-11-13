@@ -57,16 +57,22 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
     () => new Set<AnnotationKind>(annotationTypes.map((type) => type.kind)),
   );
   const [locate, setLocate] = useState(0);
+  const [loadedImage, setLoadedImage] = useState<string | null>(null);
+  const [failedImage, setFailedImage] = useState<string | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const mark = useRef<HTMLDivElement>(null);
   const readable = doc.state !== "не прочитан";
+  const pageImage = doc.previewPages?.[page - 1];
+  const imageFailed = Boolean(pageImage && failedImage === pageImage.src);
+  const pageReady = !pageImage || (loadedImage === pageImage.src && !imageFailed);
   const sourceField = doc.fields.find((field) => isSourceField(field, source));
   const sourceKind = sourceField
     ? annotationKind(sourceField.label)
     : source.amount
       ? "money"
       : "number";
-  const showMark = readable && page === source.page && highlight && enabledKinds.has(sourceKind);
+  const showMark =
+    readable && pageReady && page === source.page && highlight && enabledKinds.has(sourceKind);
   useEffect(() => {
     setPage(source.page);
     setHighlight(true);
@@ -212,71 +218,110 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
       >
         <div
           className="document-sheet"
-          style={{ width: `${zoom}%` }}
+          style={{
+            width: `${zoom}%`,
+            ...(pageImage ? { aspectRatio: `${pageImage.width} / ${pageImage.height}` } : {}),
+          }}
           aria-label={`Страница ${page} документа ${doc.title}`}
         >
-          {readable ? (
+          {imageFailed ? (
+            <div className="paper-unreadable" role="alert">
+              <AlertOctagon size={35} />
+              <strong>Не удалось загрузить страницу</strong>
+              <p>Проверьте соединение и попробуйте ещё раз.</p>
+              <button
+                onClick={() => {
+                  setFailedImage(null);
+                  setLoadedImage(null);
+                }}
+              >
+                Повторить загрузку
+              </button>
+            </div>
+          ) : readable ? (
             <>
-              <div className="paper-eyebrow">
-                ПЕРВИЧНЫЙ ДОКУМЕНТ <span>№ {doc.number}</span>
-              </div>
-              {fields
-                .filter((f) => f.label !== "Сумма")
-                .map((f) => (
-                  <div key={`${f.label}-${f.page}`} className="paper-field" style={pct(f.bbox)}>
-                    <small>{f.label}</small>
-                    <span>{f.value}</span>
-                  </div>
-                ))}
-              <div className="paper-title">
-                {doc.type}
-                <small>{doc.title}</small>
-              </div>
-              {amountY > 0.5 && (
-                <div className="paper-context">
-                  <p>
-                    Документ № {doc.number} от {doc.date}
-                  </p>
-                  <p>Основание: договор {doc.contract}</p>
-                  <div className="paper-rule" />
-                </div>
-              )}
-              {amount && (
+              {pageImage ? (
+                <img
+                  key={pageImage.src}
+                  className="document-page-image"
+                  src={pageImage.src}
+                  alt={`${doc.fileName ?? doc.title}, страница ${page}`}
+                  width={pageImage.width}
+                  height={pageImage.height}
+                  draggable={false}
+                  onLoad={() => setLoadedImage(pageImage.src)}
+                  onError={() => setFailedImage(pageImage.src)}
+                />
+              ) : (
                 <>
-                  <div className="paper-table-heading" style={{ top: `${amountY * 100 - 7}%` }}>
-                    <span>Наименование</span>
-                    <span>Сумма, ₽</span>
+                  <div className="paper-eyebrow">
+                    ПЕРВИЧНЫЙ ДОКУМЕНТ <span>№ {doc.number}</span>
                   </div>
-                  <div
-                    className="paper-item-name"
-                    style={{ top: `${amountY * 100}%`, width: `${(amount.bbox[0] - 0.17) * 100}%` }}
-                  >
-                    {doc.title}
+                  {fields
+                    .filter((f) => f.label !== "Сумма")
+                    .map((f) => (
+                      <div key={`${f.label}-${f.page}`} className="paper-field" style={pct(f.bbox)}>
+                        <small>{f.label}</small>
+                        <span>{f.value}</span>
+                      </div>
+                    ))}
+                  <div className="paper-title">
+                    {doc.type}
+                    <small>{doc.title}</small>
                   </div>
-                  <div className="paper-amount" style={pct(amount.bbox)}>
-                    {amount.value}
-                  </div>
-                  {amountY <= 0.82 && (
-                    <div className="paper-total-line" style={{ top: `${amountY * 100 + 6}%` }}>
-                      <span>Сумма в документе</span>
-                      <strong>{amount.value} ₽</strong>
+                  {amountY > 0.5 && (
+                    <div className="paper-context">
+                      <p>
+                        Документ № {doc.number} от {doc.date}
+                      </p>
+                      <p>Основание: договор {doc.contract}</p>
+                      <div className="paper-rule" />
                     </div>
                   )}
+                  {amount && (
+                    <>
+                      <div className="paper-table-heading" style={{ top: `${amountY * 100 - 7}%` }}>
+                        <span>Наименование</span>
+                        <span>Сумма, ₽</span>
+                      </div>
+                      <div
+                        className="paper-item-name"
+                        style={{
+                          top: `${amountY * 100}%`,
+                          width: `${(amount.bbox[0] - 0.17) * 100}%`,
+                        }}
+                      >
+                        {doc.title}
+                      </div>
+                      <div className="paper-amount" style={pct(amount.bbox)}>
+                        {amount.value}
+                      </div>
+                      {amountY <= 0.82 && (
+                        <div className="paper-total-line" style={{ top: `${amountY * 100 + 6}%` }}>
+                          <span>Сумма в документе</span>
+                          <strong>{amount.value} ₽</strong>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {!amount && (
+                    <div className="paper-no-amount">
+                      На этой странице нет суммы из выбранной ссылки.
+                      <button onClick={locateSource}>
+                        Перейти к источнику · стр. {source.page}
+                      </button>
+                    </div>
+                  )}
+                  <div className="paper-footer">
+                    <span>№ {doc.number}</span>
+                    <span>
+                      {page} / {doc.pages}
+                    </span>
+                  </div>
                 </>
               )}
-              {!amount && (
-                <div className="paper-no-amount">
-                  На этой странице нет суммы из выбранной ссылки.
-                  <button onClick={locateSource}>Перейти к источнику · стр. {source.page}</button>
-                </div>
-              )}
-              <div className="paper-footer">
-                <span>№ {doc.number}</span>
-                <span>
-                  {page} / {doc.pages}
-                </span>
-              </div>
-              {highlight &&
+              {pageReady &&
+                highlight &&
                 fields
                   .filter((field) => enabledKinds.has(annotationKind(field.label)))
                   .map((field) => {

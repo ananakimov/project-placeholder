@@ -2232,6 +2232,11 @@ kbd {
   container-type: inline-size;
   font-family: Arial, sans-serif;
 }
+.document-page-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 .paper-eyebrow {
   position: absolute;
   top: 2%;

@@ -1,5 +1,6 @@
 import { formatMoney } from "@/components/money-format";
 import { SAMPLE_FILES } from "@/data/sample-files";
+import { withSamplePreview } from "@/data/sample-document-previews";
 
 export type Status = "verified" | "discrepancy" | "unverified";
 export type Bbox = [number, number, number, number]; // x, y, w, h в долях 0–1
@@ -25,7 +26,7 @@ export type Row = {
   breakdown?: Breakdown[];
 };
 export type Breakdown = { name: string; reported: string; note?: string; children?: Breakdown[] };
-export type Doc = { id: string; title: string; fileName?: string; type: string; number: string; date: string; contract: string; pages: number; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
+export type Doc = { id: string; title: string; fileName?: string; type: string; number: string; date: string; contract: string; pages: number; previewPages?: { src: string; width: number; height: number }[]; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
 export type Check = {
   id: "a" | "b" | "c" | "g"; title: string; contract: string; period: string;
   reportRow?: string;
@@ -271,7 +272,7 @@ const G_MONTHS = [["Январь", "01"], ["Февраль", "02"], ["Март",
 function sampleDoc(prefix: string, ...args: Parameters<typeof doc>): Doc {
   const file = SAMPLE_FILES.find((item) => item.name.startsWith(`${prefix}_`));
   if (!file) throw new Error(`Не найден исходный файл ${prefix}`);
-  return { ...doc(...args), fileName: file.name };
+  return withSamplePreview({ ...doc(...args), fileName: file.name }, prefix);
 }
 const gKfz = sampleDoc("01", "g-kfz", "Карточка учета фактических затрат № 3/7", "КФЗ", "3/7", "не указана", G, "7818300.00", { bbox: [0.64, 0.88, 0.22, 0.03] });
 const gPayroll = ["900000.00", "950000.00", "1000000.00", "1050000.00", "1100000.00"];

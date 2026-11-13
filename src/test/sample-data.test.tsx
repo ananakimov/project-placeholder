@@ -77,7 +77,12 @@ describe("Attached synthetic 2027 sample", () => {
       const document = g.docs.find((item) => item.id === source.docId)!;
       expect(document.fields.find((field) => field.label === "Сумма")).toMatchObject({ bbox: source.bbox, page: source.page });
       expect(document.fields.find((field) => field.label === "Номер")?.value).toBe(document.number);
-      expect(document.fields.find((field) => field.label === "Дата")?.value).toBe(document.date);
+      if (document.id === "g-kfz") {
+        expect(document.date).toBe("не указана");
+        expect(document.fields.find((field) => field.label === "Дата")).toBeUndefined();
+      } else {
+        expect(document.fields.find((field) => field.label === "Дата")?.value).toBe(document.date);
+      }
       expect(document.fields.find((field) => field.label === "Договор")?.value).toBe(document.contract);
     }
     expect(g.docs.find((document) => document.fileName!.startsWith("12_"))).toMatchObject({ number: "СВ-0427", date: "29.04.2027" });

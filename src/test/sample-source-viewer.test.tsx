@@ -150,6 +150,25 @@ describe("Original example document pages", () => {
     expect(screen.getByRole("img")).toBeInTheDocument();
   });
 
+  it("opens an unread document with an available original without claiming extracted fields", () => {
+    const doc = { ...first, state: "не прочитан" as const, fields: [] };
+    render(<SourceViewer source={production.sources[0]!} doc={doc} />);
+    const image = screen.getByRole("img");
+    fireEvent.load(image);
+    expect(image).toHaveAttribute("src", doc.previewPages![0]!.src);
+    expect(screen.getByText("Показан оригинал. Данные файла не распознаны.")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Подсвеченный фрагмент:/)).not.toBeInTheDocument();
+  });
+
+  it("allows a wider enlargement range for landscape originals", () => {
+    const report = g.docs.find((doc) => doc.type === "КФЗ")!;
+    render(<SourceViewer source={null} doc={report} />);
+    const zoomIn = screen.getByRole("button", { name: "Увеличить масштаб" });
+    for (let i = 0; i < 7; i++) fireEvent.click(zoomIn);
+    expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("275%");
+    expect(zoomIn).toBeDisabled();
+  });
+
   it("shows a retry state instead of a fabricated page or floating highlights when loading fails", () => {
     const { container } = productionViewer();
     fireEvent.error(screen.getByRole("img"));

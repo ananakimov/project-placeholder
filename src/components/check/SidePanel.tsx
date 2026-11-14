@@ -7,7 +7,7 @@ import { SourceViewer } from "./SourceViewer";
 
 export function SidePanel({ check, row, sources, sourceIndex, onSourceChange }: {
   check: Check;
-  row: Row;
+  row: Row | undefined;
   sources: readonly SourceRef[];
   sourceIndex: number;
   onSourceChange: (index: number) => void;
@@ -25,7 +25,7 @@ export function SidePanel({ check, row, sources, sourceIndex, onSourceChange }: 
   return (
     <Tabs value={String(sourceIndex)} onValueChange={(value) => onSourceChange(Number(value))} className="source-tabs">
       <h3 className="source-document-title" title={doc?.title}>{doc?.title ?? "Источник документа"}</h3>
-      <p className="source-indicator-name" title={row.name}>{row.name}</p>
+      {row && <p className="source-indicator-name" title={row.name}>{row.name}</p>}
       {sources.length > 1 && (
           <div className="document-picker">
             <button type="button" aria-label="Предыдущий документ" disabled={sourceIndex === 0}

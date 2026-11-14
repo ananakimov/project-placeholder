@@ -33,21 +33,31 @@ function closeDocument() {
 }
 
 describe("Reconciliation workspace", () => {
-  it("opens all documents from the right rail before a specific source is chosen", () => {
-    desk();
+  it("opens the original KФЗ from the rail and offers the entire package", () => {
+    const g = checks.find((check) => check.id === "g")!;
+    const report = g.docs.find((doc) => doc.type === "КФЗ")!;
+    desk(g);
     const toggle = screen.getByRole("button", { name: "Показать источник документа" });
-    expect(toggle).toBeEnabled();
+    expect(toggle.querySelector(".lucide-eye-off")).not.toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle.querySelector(".lucide-eye")).not.toBeNull();
     const panel = within(screen.getByRole("region", { name: "Источник документа" }));
-    const list = within(panel.getByRole("list", { name: "Все документы проверки" }));
-    expect(list.getAllByRole("listitem")).toHaveLength(b.docs.length);
-    const report = b.docs.find((doc) => doc.type === "КФЗ")!;
-    fireEvent.click(list.getByRole("button", { name: new RegExp(report.title) }));
+    const documents = panel.getByRole("combobox", { name: "Документы комплекта" });
+    expect(within(documents).getAllByRole("option")).toHaveLength(g.docs.length);
+    expect(documents).toHaveValue(report.id);
     expect(panel.getByRole("heading", { name: report.title })).toBeInTheDocument();
-    expect(panel.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
-    fireEvent.click(panel.getByRole("button", { name: "Все документы" }));
-    expect(panel.getByRole("list", { name: "Все документы проверки" })).toBeInTheDocument();
+    expect(panel.getByRole("img", { name: `${report.fileName}, страница 1` })).toHaveAttribute("src", report.previewPages![0]!.src);
+    const excluded = g.docs.find((doc) => doc.state === "дубль")!;
+    fireEvent.change(documents, { target: { value: excluded.id } });
+    expect(panel.getByRole("heading", { name: excluded.title })).toBeInTheDocument();
+    expect(panel.getByRole("img")).toHaveAttribute("src", excluded.previewPages![0]!.src);
+  });
+  it("clearly reports a missing original KФЗ while leaving primary documents accessible", () => {
+    desk();
+    fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
+    expect(screen.getByText("Оригинал КФЗ недоступен.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Документы комплекта" })).toBeEnabled();
   });
   it("expands the row in place; opening its document resets the panel to the exact source bbox", () => {
     desk();
@@ -170,7 +180,7 @@ describe("Reconciliation workspace", () => {
     expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
     expect(screen.getByRole("button", { name: "Субподряд: этап 2.2" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("list", { name: "Все документы проверки" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Документы комплекта" })).toHaveValue(b.docs.find((doc) => doc.type === "КФЗ")!.id);
   });
   it("keeps metadata and highlights synchronized across documents", () => {
     desk(); openDocument(b, "b-1");

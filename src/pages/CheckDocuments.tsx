@@ -4,7 +4,6 @@ import { Link } from "@tanstack/react-router";
 import { FileTypeIcon } from "@/components/FileTypeIcon";
 import { StatusLabel } from "@/components/StatusChip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Table,
   TableBody,
@@ -13,12 +12,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fieldSource } from "@/components/check/document-annotations";
-import { SourceViewer } from "@/components/check/SourceViewer";
-import type { Check, Doc, SourceRef } from "@/data/mock";
+import { SourceWorkspace, useSourceWorkspace } from "@/components/check/SourceWorkspace";
+import type { Check, Doc } from "@/data/mock";
 
-const PREFIX: Record<string, string> = { a: "А", b: "Б", c: "В", g: "g-" };
-type DocumentFilter = "all" | "read" | "error";
+type DocumentFilter = "all" | "read" | "excluded" | "error";
+function documentGroup(doc: Doc) {
+  if (doc.state === "прочитан") return "read";
+  if (doc.state === "не прочитан") return "error";
+  return "excluded";
+}
+
 const STATE_LABELS: Record<Doc["state"], string> = {
   "прочитан": "Прочитано",
   "дубль": "Дубликат",
@@ -28,30 +31,25 @@ const STATE_LABELS: Record<Doc["state"], string> = {
 };
 export function CheckDocuments({ check, version }: { check: Check; version?: number }) {
   const [filter, setFilter] = useState<DocumentFilter>("all");
-  const [open, setOpen] = useState<Doc | null>(null);
-  const readCount = check.docs.filter((d) => d.state === "прочитан").length;
+  const workspace = useSourceWorkspace(check);
+  const readCount = check.docs.filter((doc) => documentGroup(doc) === "read").length;
+  const errorCount = check.docs.filter((doc) => documentGroup(doc) === "error").length;
   const filters: { value: DocumentFilter; label: string; count: number }[] = [
     { value: "all", label: "Все", count: check.docs.length },
     { value: "read", label: "Прочитано", count: readCount },
-    { value: "error", label: "Ошибочные", count: check.docs.length - readCount },
+    { value: "excluded", label: "Исключены", count: check.docs.length - readCount - errorCount },
   ];
-  const refs = (d: Doc) =>
-    check.rows
-      .filter((r) => r.sources.some((s) => s.docId === d.id))
-      .map((r) => `${PREFIX[check.id]}${check.rows.indexOf(r) + 1}`);
-  const list = check.docs.filter((d) =>
-    filter === "all" || (filter === "read" ? d.state === "прочитан" : d.state !== "прочитан"),
-  );
-  const openRow = open
-    ? (check.rows.find((r) => r.sources.some((s) => s.docId === open.id)) ?? check.rows[0])
-    : undefined;
-  const field = open?.fields.find((item) => item.label === "Сумма") ?? open?.fields[0];
-  const source: SourceRef | null = open
-    ? openRow?.sources.find((item) => item.docId === open.id) ?? (field ? fieldSource(open, field) : null)
-    : null;
+  if (errorCount) filters.push({ value: "error", label: "Ошибка чтения", count: errorCount });
+  const list = check.docs.filter((doc) => filter === "all" || documentGroup(doc) === filter);
+  const linkedRows = (docId: string) => check.rows.filter((row) =>
+    row.sources.some((source) => source.docId === docId)
+      || row.evidenceDependencies?.includes(docId)
+      || check.excluded.some((item) => item.docId === docId && item.rowIds?.includes(row.id)));
 
   return (
-    <div className="space-y-4">
+    <div className="source-workspace space-y-4" data-source-open={workspace.panelOpen}
+      onKeyDown={(event) => { if (event.key === "Escape" && workspace.panelOpen) workspace.close(); }}>
+      <SourceWorkspace check={check} workspace={workspace} />
       <div className="flex flex-col gap-1">
         <span id="doc-filter" className="text-[12px] text-muted-foreground">
           Статус
@@ -62,7 +60,7 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
           value={filter}
           onValueChange={(v) => v && setFilter(v as DocumentFilter)}
           variant="outline"
-          className="justify-start bg-card"
+          className="justify-start flex-wrap bg-card"
         >
           {filters.map((item) => (
             <ToggleGroupItem key={item.value} value={item.value} className="px-3 text-[13px]">
@@ -85,13 +83,20 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
             </TableRow>
           </TableHeader>
           <TableBody>
-            {list.map((d) => (
-              <TableRow
+            {list.map((d) => {
+              const linked = linkedRows(d.id);
+              return <TableRow
                 key={d.id}
                 tabIndex={0}
-                onClick={() => setOpen(d)}
-                onKeyDown={(event) => { if (event.key === "Enter" && event.target === event.currentTarget) setOpen(d); }}
-                className="cursor-pointer even:bg-row-zebra hover:bg-row-hover"
+                onClick={(event) => workspace.openDocument(d, event.currentTarget)}
+                onKeyDown={(event) => {
+                  if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) {
+                    event.preventDefault();
+                    workspace.openDocument(d, event.currentTarget);
+                  }
+                }}
+                className="cursor-pointer even:bg-row-zebra hover:bg-row-hover data-[selected=true]:bg-row-hover"
+                data-selected={workspace.panelOpen && workspace.docId === d.id}
               >
                 <TableCell className="max-w-[280px] font-medium">
                   <div className="library-file">
@@ -125,9 +130,9 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
                   />
                 </TableCell>
                 <TableCell className="tabular-nums text-muted-foreground">
-                  {refs(d).length
-                    ? refs(d).map((x, i) => (
-                        <span key={x}>
+                  {linked.length
+                    ? linked.map((row, i) => (
+                        <span key={row.id}>
                           {i > 0 && ", "}
                           <Link
                             to="/checks/$id"
@@ -136,14 +141,14 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
                             onClick={(e) => e.stopPropagation()}
                             className="text-primary hover:underline"
                           >
-                            {x}
+                            {row.name.replace(/^(.*) \(Статья калькуляции (\d+)\)$/, "$2 · $1")}
                           </Link>
                         </span>
                       ))
                     : "—"}
                 </TableCell>
-              </TableRow>
-            ))}
+              </TableRow>;
+            })}
             {list.length === 0 && (
               <TableRow>
                 <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
@@ -155,18 +160,6 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
           </TableBody>
         </Table>
       </div>
-      <Sheet open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <SheetContent className="w-full overflow-y-auto sm:max-w-[520px]">
-          <SheetHeader>
-            <SheetTitle>Документ</SheetTitle>
-          </SheetHeader>
-          <div className="mt-4">
-            {open && openRow && (
-              <SourceViewer row={openRow} source={source} doc={open} />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

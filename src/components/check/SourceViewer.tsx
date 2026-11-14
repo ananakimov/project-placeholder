@@ -5,8 +5,7 @@ import {
   ChevronRight,
   Check,
   Crosshair,
-  Eye,
-  EyeOff,
+  Highlighter,
   FileQuestion,
   Info,
   Minus,
@@ -32,7 +31,7 @@ export function SourceViewer({
   source,
   doc,
 }: {
-  row?: Row;
+  row?: Row | undefined;
   source: SourceRef | null;
   doc: Doc | null;
 }) {
@@ -40,7 +39,7 @@ export function SourceViewer({
     return <div className="source-empty-state">
       <FileQuestion size={34} />
       <strong>Файл не распознан</strong>
-      <p>Для этого файла сохранено имя. Оригинал и подтверждающий фрагмент появятся после серверной обработки.</p>
+      <p>Для этого файла сохранено имя. Для просмотра и извлечения данных нужно отправить файл на сервер.</p>
     </div>;
   if (!doc)
     return (
@@ -49,6 +48,8 @@ export function SourceViewer({
         <strong>Нет подтверждающего документа</strong>
       </div>
     );
+  if (doc.type === "КФЗ" && !doc.previewPages?.length)
+    return <p className="source-empty-state">Оригинал КФЗ недоступен.</p>;
   return <Viewer key={`${row?.id ?? "document"}:${doc.id}`} source={source} doc={doc} />;
 }
 function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
@@ -65,6 +66,7 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
   const mark = useRef<HTMLDivElement>(null);
   const readable = doc.state !== "не прочитан";
   const pageImage = doc.previewPages?.[page - 1];
+  const maxZoom = pageImage && pageImage.width > pageImage.height ? 275 : 175;
   const imageFailed = Boolean(pageImage && failedImage === pageImage.src);
   const pageReady = !pageImage || (loadedImage === pageImage.src && !imageFailed);
   const sourceField = source && doc.fields.find((field) => isSourceField(field, source));
@@ -123,7 +125,7 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
           {readable ? <Info size={15} /> : <AlertOctagon size={15} />}
           <span>
             {doc.state === "не прочитан"
-              ? "Файл не распознан. Подсветка недоступна."
+              ? pageImage ? "Показан оригинал. Данные файла не распознаны." : "Файл не распознан. Подсветка недоступна."
               : doc.state === "дубль"
                 ? "Дубликат: не учитывается повторно."
                 : doc.state === "вне периода"
@@ -192,8 +194,8 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
             <span aria-label="Масштаб документа">{zoom}%</span>
             <button
               aria-label="Увеличить масштаб"
-              disabled={zoom >= 175}
-              onClick={() => setZoom((z) => z + 25)}
+              disabled={zoom >= maxZoom}
+              onClick={() => setZoom((z) => Math.min(z + 25, maxZoom))}
             >
               <Plus size={14} />
             </button>
@@ -208,12 +210,12 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
           </div>
           <button
             aria-label={highlight ? "Скрыть подсветку" : "Показать подсветку"}
-            title="Подсветка"
+            title={highlight ? "Скрыть подсветку" : "Показать подсветку"}
             aria-pressed={highlight}
             disabled={!readable}
             onClick={() => setHighlight((h) => !h)}
           >
-            {highlight ? <Eye size={15} /> : <EyeOff size={15} />}
+            <Highlighter size={15} aria-hidden />
           </button>
         </div>
       </div>
@@ -245,7 +247,7 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
                 Повторить загрузку
               </button>
             </div>
-          ) : readable ? (
+          ) : (readable || pageImage) ? (
             <>
               {pageImage ? (
                 <img
@@ -327,7 +329,7 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
                   </div>
                 </>
               )}
-              {pageReady &&
+              {readable && pageReady &&
                 highlight &&
                 fields
                   .filter((field) => enabledKinds.has(annotationKind(field.label)))

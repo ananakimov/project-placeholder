@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight, FileUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadFileList, fileExtension, type UploadFile } from "@/components/UploadFiles";
@@ -9,7 +8,6 @@ import { cn } from "@/lib/utils";
 
 type FileGroup = "report" | "docs";
 export function NewCheck() {
-  const navigate = useNavigate();
   const [report, setReport] = useState<UploadFile[]>([]);
   const [docs, setDocs] = useState<UploadFile[]>([]);
   const [errors, setErrors] = useState({ report: "", docs: "" });
@@ -18,7 +16,7 @@ export function NewCheck() {
 
   function submit() {
     if (!canStart) return;
-    demoQueue.enqueue(docs.length);
+    demoQueue.enqueue(report.length + docs.length, [...report, ...docs].some((file) => file.size === 0));
     setReport([]);
     setDocs([]);
     setErrors({ report: "", docs: "" });
@@ -36,16 +34,16 @@ export function NewCheck() {
   return (
     <div className="upload-page">
       <h1>Новая проверка</h1>
-      <p className="upload-intro">Добавьте КФЗ и первичные документы. Файлы остаются на устройстве.</p>
+      <p className="upload-intro">Добавьте КФЗ и первичные документы.</p>
       <div className="mt-6 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         <UploadBlock group="report" files={report} error={errors.report} onFiles={takeFiles} onRemove={() => setReport([])} />
         <UploadBlock group="docs" files={docs} error={errors.docs} onFiles={takeFiles} onRemove={(index) => setDocs((previous) => previous.filter((_, i) => i !== index))} />
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button disabled={!canStart} onClick={submit}>Запустить проверку <ArrowRight size={17} /></Button>
-        <Button variant="outline" onClick={() => navigate({ to: "/checks/$id", params: { id: "g" } })}>Загрузить пример</Button>
+        <Button variant="outline" disabled={!demoQueue.ready} onClick={demoQueue.enqueueSample}>Загрузить пример</Button>
       </div>
-      <DemoHistory title="Последние демо-задания" />
+      <DemoHistory />
     </div>
   );
 }

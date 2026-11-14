@@ -46,7 +46,7 @@ describe("Checks list", () => {
     expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/c", "/checks/g", "/checks/a", "/checks/b"]);
     expect(screen.queryByText("Демо-режим · синтетические результаты")).not.toBeInTheDocument();
     expect(screen.queryByText("Пример", { exact: true })).not.toBeInTheDocument();
-    expect(screen.getByText("Подтверждено", { exact: true })).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("Без расхождений", { exact: true })).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getAllByText("Есть расхождения", { exact: true })).toHaveLength(2);
     expect(within(screen.getByRole("table")).getByText("Неполные данные", { exact: true })).toBeInTheDocument();
     expect(screen.getAllByText("13.11.2026")).toHaveLength(2);

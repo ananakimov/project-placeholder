@@ -158,7 +158,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                 const versionNumber = archive || version.number > 1 ? version.number : undefined;
                 const good = matches(check, counts, "verified");
                 const bad = counts.discrepancy > 0;
-                const status = good ? "Подтверждено" : bad ? "Есть расхождения" :
+                const status = good ? labels.verified : bad ? "Есть расхождения" :
                   matches(check, counts, "unverified") ? "Неполные данные" : "Нет показателей";
                 const theme = good ? "mint" : bad ? "peach" : "lavender";
                 return (
@@ -173,7 +173,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                         </div>
                       </div>
                     </td>
-                    <td><span className={cn("result-chip", archive ? "accepted" : theme)}><i aria-hidden />{archive ? "Принят" : status}</span></td>
+                    <td><span className={cn("result-chip", archive ? "accepted" : theme)}>{archive ? "Принят" : status}</span></td>
                     <td>
                       <CoverageBar c={check.coverage} />
                       <small className="coverage-description">

@@ -1,3 +1,4 @@
+import { FileWarning } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import type { Check, ExcludedDoc } from "@/data/mock";
 import { ExcludedDocs } from "./ExcludedDocs";
@@ -9,7 +10,7 @@ export function AdditionalChecks({ check, onIndicator, onExcluded, onDiagnostic,
   onDiagnostic: (docId: string, trigger: HTMLElement) => void;
   onExcluded: (item: ExcludedDoc, trigger: HTMLElement) => void;
 }) {
-  const unverified = check.rows.filter((row) => row.status === "unverified");
+  const unverified = check.rows.filter((row) => !row.service && !row.nested && row.status === "unverified");
   const flaggedDocs = check.docs.filter((doc) => doc.state !== "прочитан" &&
     !check.excluded.some((item) => item.docId === doc.id));
   const docStatus = {
@@ -23,15 +24,18 @@ export function AdditionalChecks({ check, onIndicator, onExcluded, onDiagnostic,
       <h2 id="additional-checks" className="text-lg font-medium">Дополнительные проверки</h2>
       {check.excluded.length > 0 && <ExcludedDocs check={check} onSource={onExcluded} />}
       {unverified.length > 0 && (
-        <section className="rounded-lg border bg-card p-4 shadow-card">
-          <h3 className="mb-2 text-sm font-medium">Недостаточно подтверждений</h3>
-          <ul className="divide-y text-sm">
+        <section className="rounded-lg border bg-card p-5 shadow-card">
+          <h3 className="mb-3 text-[15px] font-medium">Недостаточно подтверждений</h3>
+          <ul className="space-y-3 text-[13px]">
             {unverified.map((row) => (
-              <li key={row.id} className="space-y-1 py-2">
-                <button type="button" className="text-left font-medium text-primary underline underline-offset-2"
-                  aria-label={`Перейти к строке: ${row.name}`} onClick={() => onIndicator(row.id)}>{row.name}</button>
-                {row.reason && <p className="text-muted-foreground">{row.reason}</p>}
-                {row.partialNote && <p className="text-muted-foreground">{row.partialNote}</p>}
+              <li key={row.id} className="flex items-start gap-2">
+                <FileWarning className="mt-0.5 h-4 w-4 shrink-0 text-unverified" aria-hidden="true" />
+                <div>
+                  <button type="button" className="text-left font-medium hover:underline"
+                    aria-label={`Перейти к строке: ${row.name}`} onClick={() => onIndicator(row.id)}>{row.name}</button>
+                  <p className="text-muted-foreground">{row.reason || "Недостаточно данных для проверки"}</p>
+                  {row.partialNote && <p className="text-muted-foreground">{row.partialNote}</p>}
+                </div>
               </li>
             ))}
           </ul>
@@ -43,7 +47,7 @@ export function AdditionalChecks({ check, onIndicator, onExcluded, onDiagnostic,
           <ul className="space-y-2 text-sm">
             {flaggedDocs.map((doc) => doc.state !== "прочитан" && (
               <li key={doc.id}>
-                <strong>{doc.demoUpload ? "Демо · не распознан" : docStatus[doc.state]}</strong> · {check.rows.some((row) => row.sources.some((source) => source.docId === doc.id))
+                <strong>{doc.demoUpload ? "Файл не распознан" : docStatus[doc.state]}</strong> · {check.rows.some((row) => row.sources.some((source) => source.docId === doc.id))
                   ? <button type="button" className="text-left text-primary underline"
                       onClick={(event) => onDiagnostic(doc.id, event.currentTarget)}>{doc.title}</button>
                   : doc.title}

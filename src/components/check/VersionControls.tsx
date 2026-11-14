@@ -16,8 +16,8 @@ export function VersionControls({ check, selected }: { check: Check; selected: D
   const current = checkHistory.current(check);
   const pending = versions.find((version) => version.number !== 1 && version.readyAt > checkHistory.now);
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2" data-print-hide>
-      <label className="flex flex-wrap items-center gap-2 text-sm">
+    <div className="flex flex-wrap items-center gap-2 pb-1.5" data-print-hide>
+      {versions.length > 1 && <label className="flex flex-wrap items-center gap-2 text-sm">
         Версия
         <select className="max-w-full rounded-md border bg-card px-2 py-1.5" value={selected.number}
           onChange={(event) => {
@@ -33,7 +33,7 @@ export function VersionControls({ check, selected }: { check: Check; selected: D
             </option>
           ))}
         </select>
-      </label>
+      </label>}
       <EditPackage key={selected.number} docs={selected.result.docs}
         disabled={!checkHistory.ready || !!pending}
         submit={(docs) => {
@@ -43,8 +43,7 @@ export function VersionControls({ check, selected }: { check: Check; selected: D
           }
           return saved;
         }} />
-      <span className="text-xs text-muted-foreground">Демо-версии сохраняются в этом браузере.</span>
-      {pending && <p className="w-full text-sm text-muted-foreground" role="status">
+      {pending && <p className="text-xs text-muted-foreground" role="status">
         Версия {pending.number} в обработке. Пока доступна версия {current.number}.
       </p>}
     </div>

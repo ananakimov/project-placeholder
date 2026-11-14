@@ -32,14 +32,14 @@ export function SourceViewer({
   source,
   doc,
 }: {
-  row: Row;
+  row?: Row;
   source: SourceRef | null;
   doc: Doc | null;
 }) {
   if (doc?.demoUpload)
     return <div className="source-empty-state">
       <FileQuestion size={34} />
-      <strong>Демо · файл не распознан</strong>
+      <strong>Файл не распознан</strong>
       <p>Для этого файла сохранено имя. Оригинал и подтверждающий фрагмент появятся после серверной обработки.</p>
     </div>;
   if (!doc)
@@ -49,7 +49,7 @@ export function SourceViewer({
         <strong>Нет подтверждающего документа</strong>
       </div>
     );
-  return <Viewer key={`${row.id}:${doc.id}`} source={source} doc={doc} />;
+  return <Viewer key={`${row?.id ?? "document"}:${doc.id}`} source={source} doc={doc} />;
 }
 function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
   const [page, setPage] = useState(source?.page ?? 1);

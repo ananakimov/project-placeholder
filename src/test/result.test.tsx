@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CheckDetail } from "@/pages/CheckDetail";
 import { CheckHeader } from "@/components/check/CheckHeader";
 import { ChecksProvider, applyVariants, useChecks } from "@/context/ChecksContext";
+import { recheckDemo } from "@/data/demo-recheck";
 import { checks } from "@/data/mock";
 import { PROBLEMS } from "@/data/problems";
 
@@ -22,20 +23,36 @@ function Result() {
 function setup() { render(<ChecksProvider><Result /></ChecksProvider>); }
 
 describe("Combined result", () => {
-  it("shows the conclusion and one compact coverage card above the six-column table", () => {
+  it("shows the conclusion and one coverage card above the original four-column table", () => {
     setup();
     const conclusion = screen.getByRole("region", { name: "Заключение по проверке" });
     const coverage = screen.getByRole("region", { name: "Покрытие" });
     const table = screen.getByRole("table", { name: "Показатели КФЗ" });
     expect(within(conclusion).getByRole("heading", { name: "Недостоверен" })).toBeInTheDocument();
     expect(within(coverage).getByText(/38,6%/)).toBeInTheDocument();
+    expect(within(coverage).getByText("По строкам")).toBeInTheDocument();
+    expect(within(coverage).getByText("По сумме")).toBeInTheDocument();
+    expect(table.compareDocumentPosition(screen.getByRole("button", { name: "Принять проверку" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("Найденные проблемы")).not.toBeInTheDocument();
     expect(conclusion.compareDocumentPosition(coverage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(coverage.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(table).getAllByRole("columnheader").map((column) => column.textContent))
-      .toEqual(["Показатель КФЗ", "В КФЗ", "Ожидаемо", "Разница Δ", "Статус", "Пояснение"]);
+      .toEqual(["Показатель", "В отчёте, ₽", "Документы, ₽", "Разница, ₽"]);
     const navigation = screen.getByRole("navigation", { name: "Разделы проверки" });
     expect(within(navigation).getAllByRole("link").map((link) => link.textContent)).toEqual(["Результат", "Документы"]);
+  });
+  it("describes the financial findings from the open version", () => {
+    const sample = checks.find((check) => check.id === "g")!;
+    const { rerender } = render(<ChecksProvider><CheckDetail check={sample} /></ChecksProvider>);
+    const conclusion = () => within(screen.getByRole("region", { name: "Заключение по проверке" }));
+    expect(conclusion().getByText(/14\s800,00 ₽.*25\s000,00 ₽/)).toBeInTheDocument();
+    expect(conclusion().getByText(/128\s500,00 ₽/)).toBeInTheDocument();
+    expect(conclusion().getByText(/7\s818\s300,00 ₽/)).toBeInTheDocument();
+    const row = sample.rows.find((indicator) => indicator.id === "g-2")!;
+    const updated = recheckDemo(sample, sample.docs.filter((doc) => doc.id !== row.sources[0]!.docId));
+    rerender(<ChecksProvider><CheckDetail check={updated} version={2} /></ChecksProvider>);
+    expect(conclusion().queryByText(/выше подтверждённого на 14\s800,00 ₽/)).not.toBeInTheDocument();
+    expect(conclusion().getByText(/25\s000,00 ₽/)).toBeInTheDocument();
   });
   it("opens and scrolls to a problem row even if search and filters had hidden it", () => {
     const c = checks.find((check) => check.id === "c")!;

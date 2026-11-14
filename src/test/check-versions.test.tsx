@@ -65,6 +65,7 @@ describe("Versioned demo package", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-11-14T12:00:00Z"));
     render(<ChecksProvider><Workflow /></ChecksProvider>);
+    expect(screen.queryByRole("combobox", { name: "Версия" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Принять проверку" }));
     fireEvent.click(screen.getByRole("button", { name: "Изменить комплект" }));
     const editor = screen.getByRole("dialog", { name: "Изменить комплект" });

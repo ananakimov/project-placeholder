@@ -22,7 +22,7 @@ export function DemoHistory({ title = "История демо-заданий" }
   return <section className="mt-6 rounded-lg border bg-card p-4" aria-labelledby={heading}>
     <h2 id={heading} className="text-base font-medium">{title}</h2>
     <p className="mt-1 text-sm text-muted-foreground">
-      Синтетика. Очередь демонстрирует интерфейс. Файлы остаются на устройстве, сверка не выполняется.
+      Здесь можно проверить отправку комплектов в очередь. Сверка файлов недоступна.
     </p>
     {!demoQueue.ready && <p className="mt-3 text-sm text-muted-foreground">Загрузка истории…</p>}
     {demoQueue.ready && entries.length === 0 &&

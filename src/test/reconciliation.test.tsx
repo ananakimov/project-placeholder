@@ -33,14 +33,21 @@ function closeDocument() {
 }
 
 describe("Reconciliation workspace", () => {
-  it("opens the active indicator's first document from the right rail on entry", () => {
+  it("opens all documents from the right rail before a specific source is chosen", () => {
     desk();
     const toggle = screen.getByRole("button", { name: "Показать источник документа" });
     expect(toggle).toBeEnabled();
     fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
     const panel = within(screen.getByRole("region", { name: "Источник документа" }));
-    expect(panel.getByText("Оплата труда")).toBeInTheDocument();
-    expect(panel.getByLabelText(/Подсвеченный фрагмент/)).toBeInTheDocument();
+    const list = within(panel.getByRole("list", { name: "Все документы проверки" }));
+    expect(list.getAllByRole("listitem")).toHaveLength(b.docs.length);
+    const report = b.docs.find((doc) => doc.type === "КФЗ")!;
+    fireEvent.click(list.getByRole("button", { name: new RegExp(report.title) }));
+    expect(panel.getByRole("heading", { name: report.title })).toBeInTheDocument();
+    expect(panel.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
+    fireEvent.click(panel.getByRole("button", { name: "Все документы" }));
+    expect(panel.getByRole("list", { name: "Все документы проверки" })).toBeInTheDocument();
   });
   it("expands the row in place; opening its document resets the panel to the exact source bbox", () => {
     desk();
@@ -162,8 +169,8 @@ describe("Reconciliation workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Следующее расхождение" }));
     expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
-    expect(screen.getByRole("button", { name: "Оплата труда" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("region", { name: "Источник документа" })).toHaveTextContent("Оплата труда");
+    expect(screen.getByRole("button", { name: "Субподряд: этап 2.2" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("list", { name: "Все документы проверки" })).toBeInTheDocument();
   });
   it("keeps metadata and highlights synchronized across documents", () => {
     desk(); openDocument(b, "b-1");

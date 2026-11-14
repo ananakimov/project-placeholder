@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Archive, ClipboardList, Menu, Plus, ScanLine } from "lucide-react";
+import { Archive, ClipboardList, Plus, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -10,29 +9,22 @@ const items = [
 ] as const;
 
 export function Sidebar() {
-  const [expanded, setExpanded] = useState(false);
   const path = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <aside aria-label="Меню DocCheck" className="app-sidebar" data-expanded={expanded}
-      onPointerLeave={(event) => { if (event.pointerType === "mouse") setExpanded(false); }}
-      onKeyDown={(event) => { if (event.key === "Escape") setExpanded(false); }}>
+    <aside aria-label="Меню DocCheck" className="app-sidebar">
       <div className="brand" aria-label="DocCheck">
         <span className="brand-symbol"><ScanLine size={23} aria-hidden="true" /></span>
         <span className="brand-name">doccheck<span className="brand-dot" /></span>
       </div>
-      <button type="button" className="sidebar-toggle" aria-controls="app-sidebar-nav"
-        aria-expanded={expanded} aria-label={expanded ? "Свернуть меню" : "Развернуть меню"}
-        onClick={() => setExpanded((previous) => !previous)}><Menu size={20} aria-hidden="true" /></button>
-      <nav id="app-sidebar-nav" aria-label="Основная навигация">
+      <nav aria-label="Основная навигация">
         {items.map((item) => {
           const active = item.url === "/checks"
             ? /^\/checks\/?$/.test(path) || (path.startsWith("/checks/") && !/^\/checks\/new\/?$/.test(path))
             : path.replace(/\/$/, "") === item.url;
           return (
             <Link key={item.url} to={item.url} aria-label={item.title} aria-current={active ? "page" : undefined}
-              activeOptions={{ exact: true }} className={cn("nav-item", active && "active")}
-              onClick={() => setExpanded(false)}>
+              activeOptions={{ exact: true }} className={cn("nav-item", active && "active")}>
               <item.icon size={19} aria-hidden="true" />
               <span>{item.title}</span>
             </Link>

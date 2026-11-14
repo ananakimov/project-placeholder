@@ -32,7 +32,7 @@ describe("Check names", () => {
     const check = { ...checks.find((item) => item.id === "b")!, synthetic: false };
     render(<CheckHeader check={check} />);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Проверка КФЗ №b");
-    expect(screen.queryByText("Синтетика")).not.toBeInTheDocument();
+    expect(screen.queryByText("Пример", { exact: true })).not.toBeInTheDocument();
     expect(screen.getByText("Договор СИН-2026/12 · Период 01.06.2026–30.09.2026")).toBeInTheDocument();
   });
 });
@@ -44,8 +44,8 @@ describe("Checks list", () => {
     expect(screen.getByText("Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.")).toBeInTheDocument();
     expect(resultLinks().map((link) => link.textContent)).toEqual(["Проверка КФЗ №c", "КФЗ №3/7", "Проверка КФЗ №a", "Проверка КФЗ №b"]);
     expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/c", "/checks/g", "/checks/a", "/checks/b"]);
-    expect(screen.getByText("Демо-режим · синтетические результаты")).toBeInTheDocument();
-    expect(screen.queryByText("Синтетика")).not.toBeInTheDocument();
+    expect(screen.queryByText("Демо-режим · синтетические результаты")).not.toBeInTheDocument();
+    expect(screen.queryByText("Пример", { exact: true })).not.toBeInTheDocument();
     expect(screen.getByText("Подтверждено", { exact: true })).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getAllByText("Есть расхождения", { exact: true })).toHaveLength(2);
     expect(within(screen.getByRole("table")).getByText("Неполные данные", { exact: true })).toBeInTheDocument();

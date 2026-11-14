@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Copy, Download, FileWarning, PenLine } from "lucide-react";
+import { Copy, FileWarning, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Money } from "@/components/Money";
-import { ExportDialog } from "@/components/check/ExportDialog";
 import { useChecks } from "@/context/ChecksContext";
 import { countByStatus } from "@/pages/Checks";
 import { CONCLUSION_SUMMARY, EXPLANATION_DRAFTS, PROBLEMS, REQUEST_DRAFTS } from "@/data/problems";
@@ -58,7 +57,6 @@ export function CheckConclusion({ check, onProblemSelect, children }: { check: C
   const signature = store.signature[check.id] ?? null;
   const [text, setText] = useState(store.explanations[check.id] ?? "");
   const [reqOpen, setReqOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
   useEffect(() => {
     store.setExplanation(check.id, text);
   }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -91,13 +89,6 @@ export function CheckConclusion({ check, onProblemSelect, children }: { check: C
             {CONCLUSION_SUMMARY[check.id]}
           </p>
         )}
-        <p className="mt-2 max-w-[820px] text-[13px] text-muted-foreground">
-          Нет расхождений и непроверенных → Достоверен. Есть хотя бы одно расхождение →
-          Недостоверен. Нет расхождений, есть непроверенные → Подтвердить полностью нельзя.
-        </p>
-        <Button className="mt-4" onClick={() => setExportOpen(true)} data-print-hide>
-          <Download className="h-4 w-4" /> Скачать результат
-        </Button>
       </div>
 
       <dl aria-label="Счётчики показателей" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -292,7 +283,6 @@ export function CheckConclusion({ check, onProblemSelect, children }: { check: C
         )}
       </section>
 
-      <ExportDialog check={check} open={exportOpen} onOpenChange={setExportOpen} />
       <Dialog open={reqOpen} onOpenChange={setReqOpen}>
         <DialogContent>
           <DialogHeader>

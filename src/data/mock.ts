@@ -43,7 +43,7 @@ export type Check = {
   /** Документы, исключённые правилами из расчёта (не являются расхождением, если статья сходится). */
   excluded: ExcludedDoc[];
 };
-export type ExcludedDoc = { docId: string; file: string; reason: "дубль" | "вне периода" | "другой договор"; amount: string; impact: string; field: "Номер" | "Дата" | "Договор"; ruleId: string };
+export type ExcludedDoc = { docId: string; rowIds?: string[]; file: string; reason: "дубль" | "вне периода" | "другой договор"; amount: string; impact: string; field: "Номер" | "Дата" | "Договор"; ruleId: string };
 
 export const ORG = "АНО «Тестовый центр Синтез»";
 const PERIOD = "01.06.2026–30.09.2026";
@@ -363,9 +363,9 @@ const checkG: Check = {
   missing: ["Табели и расчёт трудоёмкости за январь–май 2027 года", "Первичные документы по материальным затратам на 128 500,00 ₽", "Отдельная детализация взносов и расчёт резерва отпусков"],
   date: "13.11.2026",
   excluded: [
-    { docId: gAdm48copy.id, file: gAdm48copy.fileName!, reason: "дубль", amount: "142000.00", field: "Номер", ruleId: "R-DUP-01", impact: "Файл совпадает байт в байт с актом ADM-48 от 27.02.2027. Повторно в сумму не включён." },
-    { docId: gOrg.id, file: gOrg.fileName!, reason: "вне периода", amount: "117000.00", field: "Дата", ruleId: "R-PER-01", impact: "Услуги за июнь 2027 года вне периода 01.01–31.05.2027. В сумму не включены." },
-    { docId: gAdm96.id, file: gAdm96.fileName!, reason: "другой договор", amount: "255000.00", field: "Договор", ruleId: "R-KEY-01", impact: "В документе договор SYN-27/04-019, проверяется SYN-27/04-018. В сумму не включён." },
+    { docId: gAdm48copy.id, rowIds: ["g-4"], file: gAdm48copy.fileName!, reason: "дубль", amount: "142000.00", field: "Номер", ruleId: "R-DUP-01", impact: "Файл совпадает байт в байт с актом ADM-48 от 27.02.2027. Повторно в сумму не включён." },
+    { docId: gOrg.id, rowIds: ["g-4"], file: gOrg.fileName!, reason: "вне периода", amount: "117000.00", field: "Дата", ruleId: "R-PER-01", impact: "Услуги за июнь 2027 года вне периода 01.01–31.05.2027. В сумму не включены." },
+    { docId: gAdm96.id, rowIds: ["g-4"], file: gAdm96.fileName!, reason: "другой договор", amount: "255000.00", field: "Договор", ruleId: "R-KEY-01", impact: "В документе договор SYN-27/04-019, проверяется SYN-27/04-018. В сумму не включён." },
   ],
   exceptionOrder: ["g-3", "g-2", "g-5", "g-8", "g-7"],
 };

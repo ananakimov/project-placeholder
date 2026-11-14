@@ -8,6 +8,7 @@ import { type Check } from "@/data/mock";
 import { useChecks } from "@/context/ChecksContext";
 import { cn } from "@/lib/utils";
 import { checkName } from "@/lib/check-name";
+
 export function countByStatus(c: Check) {
   const rows = c.rows.filter((r) => !r.service && !r.nested);
   return {
@@ -33,9 +34,11 @@ function CoverageBar({ c }: { c: Check["coverage"] }) {
     </div>
   );
 }
-function matches(counts: ReturnType<typeof countByStatus>, filter: Filter) {
+function matches(check: Check, counts: ReturnType<typeof countByStatus>, filter: Filter) {
+  const incomplete = counts.unverified > 0 || check.conclusion === "Подтвердить полностью нельзя";
   if (filter === "all") return true;
-  if (filter === "verified") return counts.verified > 0 && counts.discrepancy === 0 && counts.unverified === 0;
+  if (filter === "verified") return counts.verified > 0 && counts.discrepancy === 0 && !incomplete;
+  if (filter === "unverified") return incomplete;
   return counts[filter] > 0;
 }
 
@@ -45,15 +48,17 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
   const allChecks = override ?? ctx.checks;
   const [acceptedFilter, setAcceptedFilter] = useState(false);
   const showAccepted = archive || acceptedFilter;
-  const snapshots = allChecks.flatMap((check) => {
-    const current = ctx.checkHistory.current(check);
-    const versions = ctx.checkHistory.versions(check);
-    if (showAccepted) return versions.filter((version) => version.acceptedAt !== null);
-    return current.acceptedAt === null || versions.some((version) => version.readyAt > ctx.checkHistory.now)
-      ? [current] : [];
-  });
+  const activeResults = allChecks.map(ctx.checkHistory.current).filter((version) => version.acceptedAt === null);
+  const pendingResults = allChecks.flatMap((check) => ctx.checkHistory.versions(check)
+    .filter((version) => version.readyAt > ctx.checkHistory.now)
+    .map((pending) => ({ pending, current: ctx.checkHistory.current(check) })));
+  const snapshots = showAccepted
+    ? allChecks.flatMap((check) => ctx.checkHistory.versions(check).filter((version) => version.acceptedAt !== null))
+    : activeResults;
   const checks = snapshots.map((snapshot) => snapshot.result);
-  const jobs = override || showAccepted ? [] : ctx.demoQueue.entries;
+  const activeJobs = override ? [] : ctx.demoQueue.entries;
+  const jobs = showAccepted ? [] : activeJobs;
+  const total = checks.length + jobs.length + (showAccepted ? 0 : pendingResults.length);
   const acceptedCount = allChecks.reduce((count, check) => count + ctx.checkHistory.versions(check)
     .filter((version) => version.acceptedAt !== null).length, 0);
   const [q, setQ] = useState("");
@@ -61,17 +66,17 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
   const results = snapshots.map((version) => ({
     check: version.result, counts: countByStatus(version.result), version,
   }));
-  const activeResults = allChecks.map(ctx.checkHistory.current).filter((version) =>
-    version.acceptedAt === null || ctx.checkHistory.versions(version.result).some((item) => item.readyAt > ctx.checkHistory.now),
-  );
   const allSynthetic = checks.length > 0 && checks.every((check) => check.synthetic);
   const search = q.trim().toLocaleLowerCase("ru");
+  const matchesSearch = (check: Check) =>
+    `${checkName(check)} ${check.title} ${check.contract}`.toLocaleLowerCase("ru").includes(search);
   const entries = [
-    ...results.filter(({ check, counts }) => matches(counts, filter) &&
-      `${checkName(check)} ${check.title} ${check.contract}`.toLocaleLowerCase("ru").includes(search)
-    ).map((result) => ({ id: result.check.id, time: result.version.createdAt, result })),
+    ...results.filter(({ check, counts }) => matches(check, counts, filter) && matchesSearch(check))
+      .map((result) => ({ id: result.check.id, time: result.version.createdAt, result })),
     ...jobs.filter((job) => filter === "all" && demoJobName(job.id).toLocaleLowerCase("ru").includes(search))
       .map((job) => ({ id: job.id, time: job.createdAt, job })),
+    ...pendingResults.filter(({ pending }) => !showAccepted && filter === "all" && matchesSearch(pending.result))
+      .map(({ pending, current }) => ({ id: pending.result.id, time: pending.createdAt, pending, current })),
   ].sort((a, b) => b.time - a.time || a.id.localeCompare(b.id, "ru", { numeric: true }));
 
   function openRow(event: MouseEvent<HTMLTableRowElement>, id: Check["id"], version?: number) {
@@ -93,7 +98,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
       </div>
       <div className="checks-section">
         <div className="section-heading">
-          <h2>{showAccepted ? "Принятые проверки" : "Ваши проверки"} <span>{checks.length + jobs.length}</span></h2>
+          <h2>{showAccepted ? "Принятые проверки" : "Ваши проверки"} <span>{total}</span></h2>
           {allSynthetic && <span className="text-xs text-muted-foreground">Демо-режим · синтетические результаты</span>}
         </div>
         <div className="checks-toolbar">
@@ -102,8 +107,8 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
               <button key={item} type="button" onClick={() => { setAcceptedFilter(false); setFilter(item); }}
                 aria-pressed={!showAccepted && filter === item} className={cn(!showAccepted && filter === item && "active")}>
                 {labels[item]}
-                <span>{activeResults.filter((version) => matches(countByStatus(version.result), item)).length +
-                  (item === "all" && !override ? ctx.demoQueue.entries.length : 0)}</span>
+                <span>{activeResults.filter((version) => matches(version.result, countByStatus(version.result), item)).length +
+                  (item === "all" ? activeJobs.length + pendingResults.length : 0)}</span>
               </button>
             ))}
             {!archive && <button type="button" className={cn(showAccepted && "active")} aria-pressed={showAccepted}
@@ -142,15 +147,27 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                     <td className="date-cell"><DemoJobTime createdAt={job.createdAt} /></td>
                   </tr>;
                 }
+                if ("pending" in entry) {
+                  const { pending, current } = entry;
+                  return <tr key={`pending:${entry.id}:${pending.number}`}>
+                    <td>
+                      <div className="font-medium">{checkName(pending.result)} · Версия {pending.number}</div>
+                      <Link to="/checks/$id" params={{ id: entry.id }} search={{ version: current.number }} className="text-xs underline">
+                        Предыдущая версия
+                      </Link>
+                    </td>
+                    <td><DemoJobStatus status="Обрабатывается" /></td>
+                    <td aria-label="Покрытие отсутствует">—</td>
+                    <td>{pending.result.docs.length}</td>
+                    <td className="date-cell"><DemoJobTime createdAt={pending.createdAt} /></td>
+                  </tr>;
+                }
                 const { check, counts, version } = entry.result;
                 const versionNumber = showAccepted || version.number > 1 ? version.number : undefined;
-                const pending = !showAccepted && ctx.checkHistory.versions(check).some(
-                  (item) => item.readyAt > ctx.checkHistory.now,
-                );
-                const good = matches(counts, "verified");
+                const good = matches(check, counts, "verified");
                 const bad = counts.discrepancy > 0;
                 const status = good ? "Подтверждено" : bad ? "Есть расхождения" :
-                  counts.unverified > 0 ? "Неполные данные" : "Нет показателей";
+                  matches(check, counts, "unverified") ? "Неполные данные" : "Нет показателей";
                 const theme = good ? "mint" : bad ? "peach" : "lavender";
                 return (
                   <tr key={`${check.id}:${version.number}`} className="check-result-row" onClick={(event) => openRow(event, check.id, versionNumber)}>
@@ -166,9 +183,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                         </div>
                       </div>
                     </td>
-                    <td><span className={cn("result-chip", theme)}><i />{status}</span>
-                      {pending && <div className="mt-1 text-xs text-muted-foreground">Новая версия в обработке</div>}
-                    </td>
+                    <td><span className={cn("result-chip", theme)}><i />{status}</span></td>
                     <td>
                       <CoverageBar c={check.coverage} />
                       <small className="coverage-description">
@@ -185,8 +200,8 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
           {entries.length === 0 && (
             <div className="empty-checks">
               <FileSearch size={32} aria-hidden="true" />
-              <h3>{checks.length || jobs.length ? "Проверки не найдены" : showAccepted ? "Принятых проверок пока нет" : "Здесь появятся ваши проверки"}</h3>
-              {(checks.length > 0 || jobs.length > 0) && (
+              <h3>{total ? "Проверки не найдены" : showAccepted ? "Принятых проверок пока нет" : "Здесь появятся ваши проверки"}</h3>
+              {total > 0 && (
                 <Button variant="outline" onClick={() => { setQ(""); setFilter("all"); }}>
                   Сбросить фильтры
                 </Button>

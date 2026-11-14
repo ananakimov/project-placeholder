@@ -33,7 +33,7 @@ export function CheckConclusion({ check, children, version }: { check: Check; ch
         <div className="text-[13px] text-muted-foreground">Вывод по проверке</div>
         <h2 className={cn("conclusion-title", colors[check.conclusion])}>{check.conclusion}</h2>
         <p className="mt-1 text-sm">{recommendation}</p>
-        {check.docs.some((doc) => doc.demoUpload) && <p className="mt-1 text-xs text-muted-foreground">Новые файлы ожидают распознавания. Покрытие отражает доступные подтверждения.</p>}
+        {check.docs.some((doc) => doc.demoUpload) && <p className="mt-1 text-xs text-muted-foreground">Новые файлы в демо не распознаются. Покрытие отражает доступные подтверждения.</p>}
         <AcceptCheck check={check} version={version} />
       </section>
       <section aria-labelledby="check-coverage-heading" className="rounded-lg border bg-card p-4 shadow-card" data-print-card>

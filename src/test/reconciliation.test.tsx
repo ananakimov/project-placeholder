@@ -138,13 +138,24 @@ describe("Reconciliation workspace", () => {
     expect(within(details).getByText("Рекомендация")).toBeInTheDocument();
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
   });
-  it("shows metadata above the viewer and preserves zoom across pages", () => {
+  it("preserves the page, zoom and hidden highlight when expanding and restoring the source", () => {
     desk(a); openDocument(a, "a-7");
     expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent("АР-Q3 · 30.09.2026 · СИН-2026/11");
     fireEvent.click(screen.getByRole("button", { name: "Увеличить масштаб" }));
     fireEvent.click(screen.getByRole("button", { name: "Предыдущая страница" }));
     expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
     expect(screen.getByLabelText("Распознанное поле: Дата: 30.09.2026")).toHaveAttribute("data-kind", "date");
+    fireEvent.click(screen.getByRole("button", { name: "Скрыть подсветку" }));
+    fireEvent.click(screen.getByRole("button", { name: "Развернуть источник на весь экран" }));
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-fullscreen", "true");
+    expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Распознанное поле:/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Показать подсветку" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
+    fireEvent.click(screen.getByRole("button", { name: "Свернуть источник в боковую панель" }));
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-fullscreen", "false");
+    expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Показать подсветку" })).toBeInTheDocument();
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
     fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();

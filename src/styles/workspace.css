@@ -3138,6 +3138,7 @@ kbd {
 }
 .compact-source .document-toolbar {
   flex: 1;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 0;
   border: 0;

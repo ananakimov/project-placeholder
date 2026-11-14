@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { fieldSource } from "@/components/check/document-annotations";
 import { SourceViewer } from "@/components/check/SourceViewer";
 import type { Check, Doc, SourceRef } from "@/data/mock";
 
@@ -44,19 +45,9 @@ export function CheckDocuments({ check }: { check: Check }) {
   const openRow = open
     ? (check.rows.find((r) => r.sources.some((s) => s.docId === open.id)) ?? check.rows[0])
     : undefined;
+  const field = open?.fields.find((item) => item.label === "Сумма") ?? open?.fields[0];
   const source: SourceRef | null = open
-    ? (openRow?.sources.find((s) => s.docId === open.id) ??
-      (() => {
-        const fl = open.fields.find((x) => x.label === "Сумма") ?? open.fields[0];
-        return {
-          docId: open.id,
-          page: fl?.page ?? 1,
-          bbox: fl?.bbox ?? [0.05, 0.05, 0.9, 0.9],
-          text: fl ? `${fl.label}: ${fl.value}` : open.title,
-          amount: null,
-          matchType: "точное" as const,
-        };
-      })())
+    ? openRow?.sources.find((item) => item.docId === open.id) ?? (field ? fieldSource(open, field) : null)
     : null;
 
   return (
@@ -99,7 +90,7 @@ export function CheckDocuments({ check }: { check: Check }) {
                 key={d.id}
                 tabIndex={0}
                 onClick={() => setOpen(d)}
-                onKeyDown={(e) => e.key === "Enter" && setOpen(d)}
+                onKeyDown={(event) => { if (event.key === "Enter" && event.target === event.currentTarget) setOpen(d); }}
                 className="cursor-pointer even:bg-row-zebra hover:bg-row-hover"
               >
                 <TableCell className="max-w-[280px] font-medium">
@@ -164,13 +155,13 @@ export function CheckDocuments({ check }: { check: Check }) {
         </Table>
       </div>
       <Sheet open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <SheetContent className="w-[520px] overflow-y-auto sm:max-w-[520px]">
+        <SheetContent className="w-full overflow-y-auto sm:max-w-[520px]">
           <SheetHeader>
             <SheetTitle>Документ</SheetTitle>
           </SheetHeader>
           <div className="mt-4">
             {open && openRow && (
-              <SourceViewer row={openRow} source={source} doc={open} onWhy={() => {}} />
+              <SourceViewer row={openRow} source={source} doc={open} />
             )}
           </div>
         </SheetContent>

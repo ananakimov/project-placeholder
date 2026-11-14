@@ -251,8 +251,8 @@ const checkC: Check = {
       },
     }),
     row({
-      causes: ["Авансовый отчёт по командировкам не включён в пакет.", "Подтверждающие документы ещё не представлены."],
-      recommendation: "Представьте авансовый отчёт по командировкам за период этапа.",
+      causes: ["В комплекте может не хватать документов о расходах на командировки.", "Подтверждающие документы ещё не представлены."],
+      recommendation: "Представьте документы, подтверждающие расходы на командировки за период этапа.",
       id: "c-8", name: "Командировки", reported: "22300.00", expected: null, delta: null, status: "unverified", ruleId: "R-COV-01", reason: "Нет документа", sources: [] }),
     row({ id: "c-9", name: "Услуги связи", reported: "6000.00", expected: "6000.00", delta: "0.00", status: "verified", ruleId: "R-TOL-01", sources: [src(cSv, "6000.00")] }),
     row({ id: "c-10", name: "Арифметика КФЗ: сумма строк = итог", reported: "2485100.00", expected: "2485100.00", delta: "0.00", status: "verified", ruleId: "R-ARI-01", service: true, reason: "Сумма строк равна итогу", sources: [src(cKfz, "2485100.00")] }),

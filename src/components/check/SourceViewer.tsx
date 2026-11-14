@@ -31,26 +31,22 @@ export function SourceViewer({
   row,
   source,
   doc,
-  onWhy,
 }: {
   row: Row;
   source: SourceRef | null;
   doc: Doc | null;
-  onWhy: () => void;
 }) {
-  if (!source || !doc)
+  if (!doc)
     return (
       <div className="source-empty-state">
         <FileQuestion size={34} />
         <strong>Нет подтверждающего документа</strong>
-        <p>{row.reason || "Для этого показателя источник не найден."}</p>
-        <button onClick={onWhy}>Посмотреть объяснение</button>
       </div>
     );
-  return <Viewer key={`${row.id}:${source.docId}`} source={source} doc={doc} />;
+  return <Viewer key={`${row.id}:${doc.id}`} source={source} doc={doc} />;
 }
-function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
-  const [page, setPage] = useState(source.page);
+function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
+  const [page, setPage] = useState(source?.page ?? 1);
   const [zoom, setZoom] = useState(100);
   const [highlight, setHighlight] = useState(true);
   const [enabledKinds, setEnabledKinds] = useState(
@@ -65,15 +61,16 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
   const pageImage = doc.previewPages?.[page - 1];
   const imageFailed = Boolean(pageImage && failedImage === pageImage.src);
   const pageReady = !pageImage || (loadedImage === pageImage.src && !imageFailed);
-  const sourceField = doc.fields.find((field) => isSourceField(field, source));
+  const sourceField = source && doc.fields.find((field) => isSourceField(field, source));
   const sourceKind = sourceField
     ? annotationKind(sourceField.label)
-    : source.amount
+    : source?.amount
       ? "money"
       : "number";
   const showMark =
-    readable && pageReady && page === source.page && highlight && enabledKinds.has(sourceKind);
+    readable && pageReady && source !== null && page === source.page && highlight && enabledKinds.has(sourceKind);
   useEffect(() => {
+    if (!source) return;
     setPage(source.page);
     setHighlight(true);
     setEnabledKinds((previous) =>
@@ -95,7 +92,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
       });
     };
     centerSource();
-    // Tab activation and focus mode can change the viewport after the first render.
+    // Center the fragment after the pane or rendered page changes size.
     if (typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(centerSource);
     observer.observe(box);
@@ -103,6 +100,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
     return () => observer.disconnect();
   }, [page, zoom, showMark, locate, source]);
   const locateSource = () => {
+    if (!source) return;
     setPage(source.page);
     setHighlight(true);
     setEnabledKinds((previous) => new Set([...previous, sourceKind]));
@@ -306,7 +304,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
                       )}
                     </>
                   )}
-                  {!amount && (
+                  {!amount && source && (
                     <div className="paper-no-amount">
                       На этой странице нет суммы из выбранной ссылки.
                       <button onClick={locateSource}>
@@ -327,7 +325,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
                 fields
                   .filter((field) => enabledKinds.has(annotationKind(field.label)))
                   .map((field) => {
-                    const active = isSourceField(field, source);
+                    const active = source !== null && isSourceField(field, source);
                     return (
                       <div
                         key={`${field.label}-${field.page}`}
@@ -337,7 +335,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
                         data-active={active}
                         style={pct(field.bbox)}
                         aria-label={
-                          active
+                          active && source
                             ? `Подсвеченный фрагмент: ${source.text}`
                             : `Распознанное поле: ${field.label}: ${field.value}`
                         }
@@ -347,7 +345,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
                       </div>
                     );
                   })}
-              {showMark && !sourceField && (
+              {source && showMark && !sourceField && (
                 <div
                   ref={mark}
                   className="source-highlight"
@@ -370,7 +368,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
           )}
         </div>
       </div>
-      <div className="document-source-footer">
+      {source && <div className="document-source-footer">
         <div>
           <small>
             {source.amount ? "Сумма в выбранном документе" : "Выбранный фрагмент"} · стр.{" "}
@@ -386,7 +384,7 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
           <Crosshair size={16} />
           {source.amount ? "К сумме" : "К фрагменту"}
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

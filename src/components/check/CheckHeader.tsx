@@ -9,13 +9,13 @@ const tabs = [
   { to: "/checks/$id/documents", label: "Документы" },
 ] as const;
 
-export function CheckHeader({ check }: { check: Check }) {
+export function CheckHeader({ check, version, accepted = false }: { check: Check; version?: number; accepted?: boolean }) {
   const heading = checkName(check);
   return (
     <div>
       <nav className="text-[13px] text-muted-foreground" data-print-hide>
-        <Link to="/checks" className="hover:text-foreground">
-          Проверки
+        <Link to={accepted ? "/archive" : "/checks"} className="hover:text-foreground">
+          {accepted ? "Архив проверок" : "Проверки"}
         </Link>
         <span className="mx-1.5">/</span>
         <span className="text-foreground">{heading}</span>
@@ -45,6 +45,7 @@ export function CheckHeader({ check }: { check: Check }) {
             key={t.to}
             to={t.to}
             params={{ id: check.id }}
+            search={(previous) => previous.version === undefined ? {} : { version: previous.version }}
             activeOptions={{ exact: "exact" in t }}
             className="-mb-px border-b-2 border-transparent pb-2.5 text-sm text-muted-foreground hover:text-foreground"
             activeProps={{ className: "!border-primary !text-foreground font-medium" }}

@@ -26,7 +26,7 @@ export type Row = {
   breakdown?: Breakdown[];
 };
 export type Breakdown = { name: string; reported: string; note?: string; children?: Breakdown[] };
-export type Doc = { id: string; title: string; fileName?: string; type: string; number: string; date: string; contract: string; pages: number; previewPages?: { src: string; width: number; height: number }[]; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
+export type Doc = { id: string; demoUpload?: boolean; title: string; fileName?: string; type: string; number: string; date: string; contract: string; pages: number; previewPages?: { src: string; width: number; height: number }[]; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
 export type Check = {
   id: "a" | "b" | "c" | "g"; title: string; contract: string; period: string;
   reportRow?: string;

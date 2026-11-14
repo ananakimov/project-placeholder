@@ -39,39 +39,48 @@ function matches(counts: ReturnType<typeof countByStatus>, filter: Filter) {
   return counts[filter] > 0;
 }
 
-function checkTimestamp(check: Check) {
-  const [day, month, year] = check.date.split(".").map(Number);
-  return Date.UTC(year!, month! - 1, day!);
-}
-
 export function Checks({ checks: override, archive = false }: { checks?: Check[]; archive?: boolean }) {
   const ctx = useChecks();
   const navigate = useNavigate();
   const allChecks = override ?? ctx.checks;
   const [acceptedFilter, setAcceptedFilter] = useState(false);
   const showAccepted = archive || acceptedFilter;
-  const checks = allChecks.filter((check) => (ctx.checkHistory.current(check).acceptedAt !== null) === showAccepted);
+  const snapshots = allChecks.flatMap((check) => {
+    const current = ctx.checkHistory.current(check);
+    const versions = ctx.checkHistory.versions(check);
+    if (showAccepted) return versions.filter((version) => version.acceptedAt !== null);
+    return current.acceptedAt === null || versions.some((version) => version.readyAt > ctx.checkHistory.now)
+      ? [current] : [];
+  });
+  const checks = snapshots.map((snapshot) => snapshot.result);
   const jobs = override || showAccepted ? [] : ctx.demoQueue.entries;
-  const acceptedCount = allChecks.filter((check) => ctx.checkHistory.current(check).acceptedAt !== null).length;
+  const acceptedCount = allChecks.reduce((count, check) => count + ctx.checkHistory.versions(check)
+    .filter((version) => version.acceptedAt !== null).length, 0);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const results = checks.map((check) => ({ check, counts: countByStatus(check) }));
+  const results = snapshots.map((version) => ({
+    check: version.result, counts: countByStatus(version.result), version,
+  }));
+  const activeResults = allChecks.map(ctx.checkHistory.current).filter((version) =>
+    version.acceptedAt === null || ctx.checkHistory.versions(version.result).some((item) => item.readyAt > ctx.checkHistory.now),
+  );
   const allSynthetic = checks.length > 0 && checks.every((check) => check.synthetic);
   const search = q.trim().toLocaleLowerCase("ru");
   const entries = [
     ...results.filter(({ check, counts }) => matches(counts, filter) &&
       `${checkName(check)} ${check.title} ${check.contract}`.toLocaleLowerCase("ru").includes(search)
-    ).map((result) => ({ id: result.check.id, time: checkTimestamp(result.check), result })),
+    ).map((result) => ({ id: result.check.id, time: result.version.createdAt, result })),
     ...jobs.filter((job) => filter === "all" && demoJobName(job.id).toLocaleLowerCase("ru").includes(search))
       .map((job) => ({ id: job.id, time: job.createdAt, job })),
   ].sort((a, b) => b.time - a.time || a.id.localeCompare(b.id, "ru", { numeric: true }));
 
-  function openRow(event: MouseEvent<HTMLTableRowElement>, id: Check["id"]) {
+  function openRow(event: MouseEvent<HTMLTableRowElement>, id: Check["id"], version?: number) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey ||
       event.shiftKey || event.altKey || (event.target as HTMLElement).closest(
         'a, button, input, select, textarea, label, [role="button"], [contenteditable="true"]',
       )) return;
-    void navigate({ to: "/checks/$id", params: { id } });
+    const params = { id };
+    void navigate(version === undefined ? { to: "/checks/$id", params } : { to: "/checks/$id", params, search: { version } });
   }
 
   return (
@@ -93,7 +102,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
               <button key={item} type="button" onClick={() => { setAcceptedFilter(false); setFilter(item); }}
                 aria-pressed={!showAccepted && filter === item} className={cn(!showAccepted && filter === item && "active")}>
                 {labels[item]}
-                <span>{allChecks.filter((check) => ctx.checkHistory.current(check).acceptedAt === null && matches(countByStatus(check), item)).length +
+                <span>{activeResults.filter((version) => matches(countByStatus(version.result), item)).length +
                   (item === "all" && !override ? ctx.demoQueue.entries.length : 0)}</span>
               </button>
             ))}
@@ -133,26 +142,33 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                     <td className="date-cell"><DemoJobTime createdAt={job.createdAt} /></td>
                   </tr>;
                 }
-                const { check, counts } = entry.result;
+                const { check, counts, version } = entry.result;
+                const versionNumber = showAccepted || version.number > 1 ? version.number : undefined;
+                const pending = !showAccepted && ctx.checkHistory.versions(check).some(
+                  (item) => item.readyAt > ctx.checkHistory.now,
+                );
                 const good = matches(counts, "verified");
                 const bad = counts.discrepancy > 0;
                 const status = good ? "Подтверждено" : bad ? "Есть расхождения" :
                   counts.unverified > 0 ? "Неполные данные" : "Нет показателей";
                 const theme = good ? "mint" : bad ? "peach" : "lavender";
                 return (
-                  <tr key={check.id} className="check-result-row" onClick={(event) => openRow(event, check.id)}>
+                  <tr key={`${check.id}:${version.number}`} className="check-result-row" onClick={(event) => openRow(event, check.id, versionNumber)}>
                     <td>
                       <div className="check-title-cell">
                         <span className={cn("file-symbol", theme)}><FileSearch size={21} aria-hidden="true" /></span>
                         <div>
-                          <Link to="/checks/$id" params={{ id: check.id }}>{checkName(check)}</Link>
+                          <Link to="/checks/$id" params={{ id: check.id }} search={versionNumber === undefined ? {} : { version: versionNumber }}>{checkName(check)}</Link>
+                          {versionNumber !== undefined && <small>Версия {versionNumber}</small>}
                           <small>Договор {check.contract}</small>
                           <small className="period">{check.period.replace("–", " — ")}</small>
                           {!allSynthetic && check.synthetic && <small>Синтетика</small>}
                         </div>
                       </div>
                     </td>
-                    <td><span className={cn("result-chip", theme)}><i />{status}</span></td>
+                    <td><span className={cn("result-chip", theme)}><i />{status}</span>
+                      {pending && <div className="mt-1 text-xs text-muted-foreground">Новая версия в обработке</div>}
+                    </td>
                     <td>
                       <CoverageBar c={check.coverage} />
                       <small className="coverage-description">

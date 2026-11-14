@@ -2,8 +2,9 @@ import { Link } from "@tanstack/react-router";
 import type { Check, ExcludedDoc } from "@/data/mock";
 import { ExcludedDocs } from "./ExcludedDocs";
 
-export function AdditionalChecks({ check, onIndicator, onExcluded, onDiagnostic }: {
+export function AdditionalChecks({ check, onIndicator, onExcluded, onDiagnostic, version }: {
   check: Check;
+  version?: number | undefined;
   onIndicator: (id: string) => void;
   onDiagnostic: (docId: string, trigger: HTMLElement) => void;
   onExcluded: (item: ExcludedDoc, trigger: HTMLElement) => void;
@@ -42,14 +43,14 @@ export function AdditionalChecks({ check, onIndicator, onExcluded, onDiagnostic 
           <ul className="space-y-2 text-sm">
             {flaggedDocs.map((doc) => doc.state !== "прочитан" && (
               <li key={doc.id}>
-                <strong>{docStatus[doc.state]}</strong> · {check.rows.some((row) => row.sources.some((source) => source.docId === doc.id))
+                <strong>{doc.demoUpload ? "Демо · не распознан" : docStatus[doc.state]}</strong> · {check.rows.some((row) => row.sources.some((source) => source.docId === doc.id))
                   ? <button type="button" className="text-left text-primary underline"
                       onClick={(event) => onDiagnostic(doc.id, event.currentTarget)}>{doc.title}</button>
                   : doc.title}
               </li>
             ))}
           </ul>
-          <Link to="/checks/$id/documents" params={{ id: check.id }}
+          <Link to="/checks/$id/documents" params={{ id: check.id }} search={version === undefined ? {} : { version }}
             className="mt-2 inline-block text-sm text-primary underline">Открыть документы проверки</Link>
         </section>
       )}

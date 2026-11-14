@@ -11,12 +11,12 @@ const colors = {
   "Подтвердить полностью нельзя": "lavender",
 } satisfies Record<Check["conclusion"], string>;
 
-export function CheckConclusion({ check, children }: { check: Check; children?: ReactNode }) {
+export function CheckConclusion({ check, children, version }: { check: Check; children?: ReactNode; version?: number | undefined }) {
   const counts = countByStatus(check);
   const { coverage } = check;
   const recommendation = counts.discrepancy > 0
     ? "Уточните показатели с расхождениями по первичным документам и повторите проверку."
-    : counts.unverified > 0
+    : check.conclusion === "Подтвердить полностью нельзя"
       ? "Уточните основания по непроверенным показателям, прежде чем делать вывод о достоверности."
       : "Сверьте отчёт с итогом проверки перед его использованием.";
   const groups = [
@@ -33,7 +33,8 @@ export function CheckConclusion({ check, children }: { check: Check; children?: 
         <div className="text-[13px] text-muted-foreground">Вывод по проверке</div>
         <h2 className={cn("conclusion-title", colors[check.conclusion])}>{check.conclusion}</h2>
         <p className="mt-1 text-sm">{recommendation}</p>
-        <AcceptCheck check={check} />
+        {check.docs.some((doc) => doc.demoUpload) && <p className="mt-1 text-xs text-muted-foreground">Новые файлы ожидают распознавания. Покрытие отражает доступные подтверждения.</p>}
+        <AcceptCheck check={check} version={version} />
       </section>
       <section aria-labelledby="check-coverage-heading" className="rounded-lg border bg-card p-4 shadow-card" data-print-card>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">

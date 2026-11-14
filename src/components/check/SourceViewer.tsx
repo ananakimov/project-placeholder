@@ -36,6 +36,12 @@ export function SourceViewer({
   source: SourceRef | null;
   doc: Doc | null;
 }) {
+  if (doc?.demoUpload)
+    return <div className="source-empty-state">
+      <FileQuestion size={34} />
+      <strong>Демо · файл не распознан</strong>
+      <p>Для этого файла сохранено имя. Оригинал и подтверждающий фрагмент появятся после серверной обработки.</p>
+    </div>;
   if (!doc)
     return (
       <div className="source-empty-state">

@@ -19,10 +19,11 @@ const statusIcons = { verified: Check, discrepancy: TriangleAlert, unverified: C
 const statusFilter = (row: Row) => !row.service && !row.nested;
 type EvidenceSelection = { rowId: string; index: number; sources: readonly SourceRef[] };
 
-export function CheckDetail({ check }: { check: CheckData }) {
-  return <Reconciliation key={check.id} check={check} />;
+type ResultProps = { check: CheckData; version?: number | undefined };
+export function CheckDetail({ check, version }: ResultProps) {
+  return <Reconciliation key={`${check.id}:${version ?? 1}`} check={check} version={version} />;
 }
-function Reconciliation({ check }: { check: CheckData }) {
+function Reconciliation({ check, version }: ResultProps) {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -156,7 +157,7 @@ function Reconciliation({ check }: { check: CheckData }) {
   ];
   return (
     <div className="reconciliation-page">
-      <CheckConclusion check={check}>
+      <CheckConclusion check={check} version={version}>
       <div ref={workspace} className="source-workspace" data-source-open={sourceVisible}
         onKeyDown={(event) => { if (event.key === "Escape" && sourceVisible) hideEvidence(); }}>
       <section className="source-workspace-table min-w-0 bg-card" aria-label="Рабочее место сверки"
@@ -259,7 +260,7 @@ function Reconciliation({ check }: { check: CheckData }) {
         )}
       </section>
       </div>
-      <AdditionalChecks check={check} onExcluded={openExcluded} onDiagnostic={openDiagnostic} onIndicator={(id) => {
+      <AdditionalChecks check={check} version={version} onExcluded={openExcluded} onDiagnostic={openDiagnostic} onIndicator={(id) => {
         setQuery("");
         setFilter("all");
         if (evidence?.rowId !== id) setPanelOpen(false);

@@ -32,6 +32,8 @@ describe("Combined result", () => {
     expect(within(conclusion).getByRole("list", { name: "Счётчики показателей" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Полнота проверки" })).not.toBeInTheDocument();
     expect(screen.queryByText("Подробнее по суммам")).not.toBeInTheDocument();
+    expect(within(table).queryByText("Основание проверки")).not.toBeInTheDocument();
+    expect(within(table).queryByText("Как рассчитано")).not.toBeInTheDocument();
     expect(table.compareDocumentPosition(screen.getByRole("button", { name: "Принять и скачать заключение" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("Найденные проблемы")).not.toBeInTheDocument();
     expect(conclusion.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -75,21 +77,6 @@ describe("Combined result", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
     expect(screen.getByRole("textbox", { name: "Поиск показателя или документа" })).toHaveValue("");
     expect(screen.getByRole("button", { name: "Все 9" })).toHaveAttribute("aria-pressed", "true");
-  });
-  it("opens the contributing source directly from the calculation without expanding the indicator", () => {
-    const sample = checks.find((check) => check.id === "g")!;
-    render(<ChecksProvider><CheckDetail check={sample} /></ChecksProvider>);
-    const indicator = screen.getByRole("button", { name: /Статья калькуляции 0300/ });
-    const row = within(indicator.closest("tr")!);
-    const calculation = row.getByText("Как рассчитано").closest("details")!;
-    calculation.open = true;
-    const sources = within(row.getByRole("list", { name: "Слагаемые ожидаемого значения" }));
-    expect(sources.getAllByRole("listitem")).toHaveLength(5);
-    fireEvent.click(sources.getByRole("button", { name: "Расчёт страховых взносов, январь 2027" }));
-    expect(indicator).toHaveAttribute("aria-expanded", "false");
-    const panel = within(screen.getByRole("region", { name: "Источник документа" }));
-    fireEvent.load(panel.getByRole("img"));
-    expect(panel.getByLabelText(/Подсвеченный фрагмент: Итого: 270\s000,00/)).toBeInTheDocument();
   });
   it("keeps every problem linked to an existing indicator", () => {
     for (const check of checks) for (const block of PROBLEMS[check.id] ?? []) for (const problem of block.items) {

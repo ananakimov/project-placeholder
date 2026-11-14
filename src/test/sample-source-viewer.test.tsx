@@ -211,5 +211,11 @@ describe("Original example document pages", () => {
     expect(panel.getByLabelText(/Подсвеченный фрагмент: Дата/)).toBeInTheDocument();
     expect(panel.getByRole("button", { name: "К фрагменту" })).toBeInTheDocument();
     expect(panel.queryByRole("button", { name: "К сумме" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Расхождения 2" }));
+    expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("region", { name: "Дополнительные проверки" }))
+      .getByRole("button", { name: excluded.file }));
+    expect(screen.getByRole("region", { name: "Источник документа" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Все 6" })).toHaveAttribute("aria-pressed", "true");
   });
 });

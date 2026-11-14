@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DemoHistory } from "@/components/check/DemoHistory";
 import { NewCheck } from "@/pages/NewCheck";
 import { ChecksProvider, useChecks } from "@/context/ChecksContext";
 import { checks } from "@/data/mock";
@@ -20,12 +21,16 @@ function upload(group: "report" | "docs", ...names: string[]) {
     target: { files: names.map((name) => new File(["synthetic"], name)) },
   });
 }
-function finish() {
-  act(() => vi.advanceTimersByTime(2800));
-  expect(navigate).toHaveBeenCalledExactlyOnceWith({ to: "/checks/$id", params: { id: "g" } });
-  expect(JSON.parse(screen.getByTestId("check").textContent ?? "null")).toEqual(JSON.parse(JSON.stringify(checks.find((check) => check.id === "g"))));
+function expectExampleUnchanged() {
+  expect(JSON.parse(screen.getByTestId("check").textContent ?? "null"))
+    .toEqual(JSON.parse(JSON.stringify(checks.find((check) => check.id === "g"))));
 }
-afterEach(() => { cleanup(); vi.useRealTimers(); navigate.mockReset(); });
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+  vi.useRealTimers();
+  navigate.mockReset();
+});
 
 describe("Single-screen new check", () => {
   it("shows both upload blocks and keeps launch disabled without files", () => {
@@ -33,34 +38,53 @@ describe("Single-screen new check", () => {
     expect(screen.getByRole("region", { name: "КФЗ" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Первичные документы" })).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Шаги" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Загрузить пример" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Открыть готовый пример" })).toBeEnabled();
   });
   it("requires a report even when primary documents have been added", () => {
     setup(); upload("docs", "Акт.pdf");
-    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
   });
   it("requires at least one primary document even when a report has been added", () => {
     setup(); upload("report", "КФЗ.pdf");
-    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
   });
-  it("fills both groups with the attached example and opens g without modifying its data", () => {
-    vi.useFakeTimers(); setup();
-    fireEvent.click(screen.getByRole("button", { name: "Загрузить пример" }));
-    expect(screen.getByRole("heading", { name: "Проверка выполняется" })).toBeInTheDocument();
-    expect(screen.getByText(`КФЗ: ${SAMPLE_REPORT.name} · Первичных документов: 22`)).toBeInTheDocument();
-    finish();
+  it("opens the fixed example without staging files or adding a job", () => {
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Открыть готовый пример" }));
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({ to: "/checks/$id", params: { id: "g" } });
+    expect(screen.getByText("Демо-заданий пока нет.")).toBeInTheDocument();
+    expectExampleUnchanged();
   });
-  it("launches uploaded files to the same fixed example without parsing or changing it", () => {
-    vi.useFakeTimers(); setup(); upload("report", "Мой отчёт.pdf"); upload("docs", "Мой акт.pdf");
-    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "Запустить проверку" })); finish();
+  it("queues two independent sets, keeps only metadata and restores history after remount", () => {
+    vi.useFakeTimers();
+    setup();
+    for (const number of [1, 2]) {
+      upload("report", `Приватное название отчёта ${number}.pdf`);
+      upload("docs", `Акт ${number}.pdf`);
+      const submit = screen.getByRole("button", { name: "Добавить в демо-очередь" });
+      fireEvent.click(submit);
+      expect(submit).toBeDisabled();
+      expect(screen.queryByText(`Акт ${number}.pdf`)).not.toBeInTheDocument();
+    }
+    expect(navigate).not.toHaveBeenCalled();
+    const recent = screen.getByRole("region", { name: "Последние демо-задания" });
+    expect(within(recent).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(recent).getByText("В очереди")).toBeInTheDocument();
+    expect(within(recent).getByText("Имитация обработки")).toBeInTheDocument();
+    expect(localStorage.getItem("doccheck.demo-queue.v1")).not.toMatch(/Приватное|Акт/);
+    expectExampleUnchanged();
+    cleanup();
+    act(() => vi.advanceTimersByTime(5100));
+    render(<ChecksProvider><DemoHistory /></ChecksProvider>);
+    expect(screen.getByText("Демо завершено")).toBeInTheDocument();
+    expect(screen.getByText("Имитация обработки")).toBeInTheDocument();
   });
   it.each(["КФЗ.pdf", "Акт.pdf"])("disables launch again when %s is removed", (name) => {
     setup(); upload("report", "КФЗ.pdf"); upload("docs", "Акт.pdf");
-    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: `Убрать ${name}` }));
-    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
   });
   it("retains format filtering, one report and append behavior for primary documents", () => {
     setup(); upload("report", "КФЗ.pdf", "Второй.pdf", "Неподходящий.xlsx");
@@ -75,10 +99,10 @@ describe("Single-screen new check", () => {
     expect(screen.queryByRole("button", { name: "Убрать КФЗ.pdf" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Убрать Заменённый.pdf" })).toBeInTheDocument();
   });
-  it("still launches when a file has the existing damaged-example marker", () => {
-    vi.useFakeTimers(); setup(); upload("report", "КФЗ.pdf"); upload("docs", "Ведомость (повреждён).xlsx");
-    fireEvent.click(screen.getByRole("button", { name: "Запустить проверку" }));
-    expect(screen.getByText(/Файл не открыт: Ведомость/)).toBeInTheDocument(); finish();
+  it("does not infer that a file is damaged from its name", () => {
+    setup(); upload("report", "КФЗ.pdf"); upload("docs", "Документ (повреждён).xlsx");
+    expect(screen.queryByText(/Файл не открыт/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeEnabled();
   });
   it("uses the 23 original input files with exact sizes and hashes, excluding reference answers", () => {
     expect(SAMPLE_REPORT.name).toBe("01_Карточка_учета_фактических_затрат_этап_3.pdf");

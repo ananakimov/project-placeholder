@@ -1,28 +1,28 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowRight, Check, FileUp, Loader2, Plus } from "lucide-react";
+import { ArrowRight, FileUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { UploadFileList, fileExtension, demoFileBroken, type UploadFile } from "@/components/UploadFiles";
-import { SAMPLE_REPORT, SAMPLE_DOCS } from "@/data/sample-files";
+import { UploadFileList, fileExtension, type UploadFile } from "@/components/UploadFiles";
+import { useChecks } from "@/context/ChecksContext";
+import { DemoHistory } from "@/components/check/DemoHistory";
 import { cn } from "@/lib/utils";
 
 type FileGroup = "report" | "docs";
-const RUN = ["Чтение файлов", "Извлечение реквизитов", "Связывание", "Расчёт", "Правила"];
-
 export function NewCheck() {
   const navigate = useNavigate();
   const [report, setReport] = useState<UploadFile[]>([]);
   const [docs, setDocs] = useState<UploadFile[]>([]);
   const [errors, setErrors] = useState({ report: "", docs: "" });
-  const [run, setRun] = useState<number | null>(null);
-  const canStart = report.length > 0 && docs.length > 0;
-  const brokenFiles = [...report, ...docs].filter((file) => demoFileBroken(file.name));
-  useEffect(() => {
-    if (run === null) return;
-    const timers = RUN.map((_, i) => setTimeout(() => setRun(i + 1), (i + 1) * 500));
-    timers.push(setTimeout(() => navigate({ to: "/checks/$id", params: { id: "g" } }), RUN.length * 500 + 300));
-    return () => timers.forEach(clearTimeout);
-  }, [run !== null, navigate]);
+  const { demoQueue } = useChecks();
+  const canStart = demoQueue.ready && report.length === 1 && docs.length > 0;
+
+  function submit() {
+    if (!canStart) return;
+    demoQueue.enqueue(docs.length);
+    setReport([]);
+    setDocs([]);
+    setErrors({ report: "", docs: "" });
+  }
 
   const takeFiles = (incoming: FileList | null, group: FileGroup) => {
     if (!incoming) return;
@@ -33,44 +33,19 @@ export function NewCheck() {
     if (group === "report") setReport((previous) => accepted.length ? accepted.slice(0, 1) : previous);
     else setDocs((previous) => [...previous, ...accepted]);
   };
-  const sample = () => {
-    setReport([SAMPLE_REPORT]);
-    setDocs(SAMPLE_DOCS);
-    setErrors({ report: "", docs: "" });
-    setRun(0);
-  };
-
-  if (run !== null) return (
-    <div className="upload-page">
-      <h1>Проверка выполняется</h1>
-      <section className="upload-card run-card">
-        <h2>Подготовка к сверке</h2>
-        <p className="text-sm text-muted-foreground">КФЗ: {report[0]?.name} · Первичных документов: {docs.length}</p>
-        <div className="run-progress" role="progressbar" aria-label="Этапы проверки" aria-valuenow={run} aria-valuemin={0} aria-valuemax={RUN.length}>
-          <span style={{ width: `${(run / RUN.length) * 100}%` }} />
-        </div>
-        <ul className="run-steps">
-          {RUN.map((label, i) => <li key={label} data-done={i < run}>
-            <span>{i < run ? <Check size={20} /> : i === run ? <Loader2 size={20} className="animate-spin" /> : i + 1}</span>{label}
-          </li>)}
-        </ul>
-        {brokenFiles.map((file) => <p key={file.name} className="upload-file-error">Файл не открыт: {file.name}. Остальные шаги продолжаются.</p>)}
-      </section>
-    </div>
-  );
-
   return (
     <div className="upload-page">
       <h1>Новая проверка</h1>
-      <p className="upload-intro">Добавьте КФЗ и первичные документы.</p>
+      <p className="upload-intro">Демо-режим. Выберите КФЗ и первичные документы, чтобы посмотреть очередь. Файлы не отправляются.</p>
       <div className="mt-6 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         <UploadBlock group="report" files={report} error={errors.report} onFiles={takeFiles} onRemove={() => setReport([])} />
         <UploadBlock group="docs" files={docs} error={errors.docs} onFiles={takeFiles} onRemove={(index) => setDocs((previous) => previous.filter((_, i) => i !== index))} />
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button disabled={!canStart} onClick={() => canStart && setRun(0)}>Запустить проверку <ArrowRight size={17} /></Button>
-        <Button variant="outline" onClick={sample}>Загрузить пример</Button>
+        <Button disabled={!canStart} onClick={submit}>Добавить в демо-очередь <ArrowRight size={17} /></Button>
+        <Button variant="outline" onClick={() => navigate({ to: "/checks/$id", params: { id: "g" } })}>Открыть готовый пример</Button>
       </div>
+      <DemoHistory title="Последние демо-задания" />
     </div>
   );
 }
@@ -101,7 +76,7 @@ function UploadBlock({ group, files, error, onFiles, onRemove }: {
         <p>{report ? "Перетащите КФЗ сюда" : "Перетащите документы сюда"}</p>
         <Button variant="outline" onClick={() => input.current?.click()}>Выбрать файл{report ? "" : "ы"}</Button>
       </div> : <>
-        <UploadFileList files={files} previewTick={null} onRemove={onRemove} compact />
+        <UploadFileList files={files} onRemove={onRemove} />
         <div className="upload-list-actions !mt-3">
           <button onClick={() => input.current?.click()}><Plus size={16} />{report ? "Заменить КФЗ" : "Добавить документы"}</button>
           <span>Файлов: {files.length}</span>

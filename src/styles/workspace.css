@@ -192,56 +192,6 @@ button:disabled {
   height: 42px;
   white-space: nowrap;
 }
-.overview-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-  margin-bottom: 36px;
-}
-.stat-card {
-  padding: 24px;
-  background: #f4f7f5;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  text-align: left;
-}
-.stat-card > span {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--ui-secondary);
-}
-.stat-card > strong {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 38px;
-  font-weight: 400;
-  line-height: 1.2;
-  margin: 18px 0 10px;
-}
-.stat-card small {
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--ui-secondary);
-}
-.stat-peach {
-  background: #fff0e5;
-}
-.stat-mint {
-  background: #e4f7f1;
-}
-.stat-neutral {
-  background: #f3eaff;
-}
-.stat-active {
-  border-color: #8ea7a3;
-}
-.stat-card:hover:not(div) {
-  border-color: #9db3ad;
-}
 .checks-section {
   background: white;
   border-top: 1px solid var(--ui-line);
@@ -501,13 +451,6 @@ button:disabled {
 }
 .row-open:hover {
   background: var(--ui-soft);
-}
-.table-footer {
-  display: flex;
-  justify-content: space-between;
-  padding: 18px 0;
-  font-size: 12px;
-  color: var(--ui-muted);
 }
 .empty-checks {
   display: flex;
@@ -2608,9 +2551,6 @@ kbd {
   .reconcile-bottom > span:last-child {
     display: none;
   }
-  .stat-card {
-    padding: 20px 17px;
-  }
   .checks-table {
     min-width: 960px;
   }
@@ -2659,9 +2599,6 @@ kbd {
   }
 }
 @media (max-width: 1000px) {
-  .overview-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .legend {
     display: none;
   }
@@ -2835,19 +2772,6 @@ kbd {
   .page-heading p {
     font-size: 13px;
   }
-  .overview-stats {
-    gap: 12px;
-    margin-bottom: 26px;
-  }
-  .stat-card > span {
-    font-size: 12px;
-  }
-  .stat-card > strong {
-    font-size: 34px;
-  }
-  .stat-card small {
-    font-size: 11px;
-  }
   .section-heading {
     padding: 20px 0;
   }
@@ -2918,9 +2842,6 @@ kbd {
   }
   .result-chip {
     font-size: 11px;
-  }
-  .table-footer {
-    font-size: 10px;
   }
   .check-tabs {
     gap: 6px !important;

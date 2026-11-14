@@ -63,7 +63,7 @@ export function CheckDocuments({ check }: { check: Check }) {
     <div className="space-y-4">
       <div className="flex flex-col gap-1">
         <span id="doc-filter" className="text-[12px] text-muted-foreground">
-          Состояние файла
+          Статус
         </span>
         <ToggleGroup
           aria-labelledby="doc-filter"
@@ -84,7 +84,7 @@ export function CheckDocuments({ check }: { check: Check }) {
         <Table className="text-[13px] [&_td]:whitespace-normal">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              {["Файл", "Тип", "Номер", "Дата", "Договор", "Стр.", "Состояние", "Строки КФЗ"].map(
+              {["Файл", "Тип", "Номер", "Дата", "Договор", "Стр.", "Статус", "Строки КФЗ"].map(
                 (h) => (
                   <TableHead key={h} className="h-9 text-[12px] font-medium text-muted-foreground">
                     {h}
@@ -122,6 +122,7 @@ export function CheckDocuments({ check }: { check: Check }) {
                 <TableCell className="tabular-nums">{d.pages}</TableCell>
                 <TableCell>
                   <StatusLabel
+                    plain={d.state !== "прочитан"}
                     status={
                       d.state === "прочитан"
                         ? "verified"
@@ -155,7 +156,7 @@ export function CheckDocuments({ check }: { check: Check }) {
               <TableRow>
                 <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                   <FileSearch className="mx-auto mb-2 h-6 w-6" />
-                  Документов в этом состоянии нет
+                  Документов с этим статусом нет
                 </TableCell>
               </TableRow>
             )}

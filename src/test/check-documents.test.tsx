@@ -13,7 +13,7 @@ const g = checks.find((check) => check.id === "g")!;
 describe("Document state filters", () => {
   it("partitions the example into read and erroneous files, retaining each error reason", () => {
     render(<CheckDocuments check={g} />);
-    const filters = screen.getByRole("radiogroup", { name: "Состояние файла" });
+    const filters = screen.getByRole("radiogroup", { name: "Статус" });
     expect(within(filters).getAllByRole("radio").map((button) => button.textContent)).toEqual([
       "Все (23)", "Прочитано (20)", "Ошибочные (3)",
     ]);
@@ -51,11 +51,11 @@ describe("Document state filters", () => {
     render(<CheckDocuments check={checks.find((check) => check.id === "a")!} />);
     const errors = screen.getByRole("radio", { name: "Ошибочные (0)" });
     fireEvent.click(errors);
-    expect(screen.getByText("Документов в этом состоянии нет")).toBeInTheDocument();
+    expect(screen.getByText("Документов с этим статусом нет")).toBeInTheDocument();
     fireEvent.click(errors);
     expect(errors).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText("Документов в этом состоянии нет")).toBeInTheDocument();
+    expect(screen.getByText("Документов с этим статусом нет")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("radio", { name: /^Все/ }));
-    expect(screen.queryByText("Документов в этом состоянии нет")).not.toBeInTheDocument();
+    expect(screen.queryByText("Документов с этим статусом нет")).not.toBeInTheDocument();
   });
 });

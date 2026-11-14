@@ -50,7 +50,8 @@ describe("Single accountant workflow", () => {
     expect(within(sidebar).queryByText("Бухгалтер", { exact: true })).not.toBeInTheDocument();
     expect(within(sidebar).queryByText("Анна Иванова")).not.toBeInTheDocument();
     expect(within(sidebar).queryByText("АИ", { exact: true })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("КФЗ № б/н · 2 этап, 2026 г.");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Проверка КФЗ №b");
+    expect(screen.getByText("2 этап, 2026 г.")).toBeInTheDocument();
     expect(screen.getByText("Синтетика")).toBeInTheDocument();
     expect(screen.getByText("Договор СИН-2026/12 · Период 01.06.2026–30.09.2026")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Роль пользователя" })).not.toBeInTheDocument();
@@ -59,8 +60,9 @@ describe("Single accountant workflow", () => {
     expect(screen.queryByRole("link", { name: "Журнал действий" })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Журнал" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Отметить как просмотренное" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Черновик пояснения" })).toBeEnabled();
-    expect(screen.getByRole("textbox", { name: "Пояснение бухгалтера" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Черновик запроса" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Черновик пояснения" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Пояснение бухгалтера" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Подписать вывод" })).toBeDisabled();
     selectRow("b-1");
     expect(screen.getByRole("button", { name: "Исправить значение" })).toBeEnabled();
@@ -84,24 +86,21 @@ describe("Single accountant workflow", () => {
     vi.setSystemTime(new Date(2026, 10, 14, 9, 5));
     setup();
     const signButton = screen.getByRole("button", { name: "Подписать вывод" });
-    const explanation = screen.getByRole("textbox", { name: "Пояснение бухгалтера" });
     for (const id of b.exceptionOrder) {
       expect(signButton).toBeDisabled();
       selectRow(id);
       fireEvent.click(screen.getByRole("button", { name: "Отметить как просмотренное" }));
     }
-    fireEvent.change(explanation, { target: { value: "Все расхождения рассмотрены." } });
     expect(signButton).toBeEnabled();
     fireEvent.click(signButton);
     expect(screen.getByText("Подписано: главный бухгалтер Иванова А. С., 14.11.2026 09:05")).toBeInTheDocument();
-    expect(explanation).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Подписать вывод" })).not.toBeInTheDocument();
 
     selectRow("b-1");
     fireEvent.click(screen.getByRole("button", { name: "Исправить значение" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Сохранить" }));
     expect(screen.queryByText(/^Подписано:/)).not.toBeInTheDocument();
     expect(screen.getByTestId("check-state")).toHaveTextContent("Нужна повторная подпись");
-    expect(explanation).toBeEnabled();
-    expect(explanation).toHaveValue("Все расхождения рассмотрены.");
+    expect(screen.getByRole("button", { name: "Подписать вывод" })).toBeEnabled();
   }, 15_000); // Preserve the complete review/sign/correct flow on slower CI machines.
 });

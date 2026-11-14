@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Check } from "@/data/mock";
+import { checkName } from "@/lib/check-name";
 
 const tabs = [
   { to: "/checks/$id", label: "Результат", exact: true },
@@ -9,7 +10,7 @@ const tabs = [
 ] as const;
 
 export function CheckHeader({ check }: { check: Check }) {
-  const heading = `КФЗ № ${check.kfzNumber} · ${check.reportRow ?? "3 этап, 2026 г."}`;
+  const heading = checkName(check);
   return (
     <div>
       <nav className="text-[13px] text-muted-foreground" data-print-hide>
@@ -23,6 +24,7 @@ export function CheckHeader({ check }: { check: Check }) {
         <div>
           <h1 className="font-serif text-[28px] font-semibold leading-tight">{heading}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
+            {check.reportRow && <span>{check.reportRow}</span>}
             <span className="tabular-nums">
               Договор {check.contract} · Период {check.period}
             </span>
@@ -33,7 +35,7 @@ export function CheckHeader({ check }: { check: Check }) {
             })}>
               {check.conclusion}
             </Badge>
-            {(check.synthetic || check.kfzNumber === "б/н") && <span>Синтетика</span>}
+            {check.synthetic && <span>Синтетика</span>}
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { ChecksProvider, useChecks } from "@/context/ChecksContext";
 import { recheckDemo } from "@/data/demo-recheck";
 import { getCheck } from "@/data/mock";
 import { Checks } from "@/pages/Checks";
+vi.mock("@/lib/export", () => ({ downloadBlob: vi.fn() }));
 
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => vi.fn(),
@@ -66,7 +67,7 @@ describe("Versioned demo package", () => {
     vi.setSystemTime(new Date("2026-11-14T12:00:00Z"));
     render(<ChecksProvider><Workflow /></ChecksProvider>);
     expect(screen.queryByRole("combobox", { name: "Версия" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Принять проверку" }));
+    fireEvent.click(screen.getByRole("button", { name: "Принять и скачать заключение" }));
     fireEvent.click(screen.getByRole("button", { name: "Изменить комплект" }));
     const editor = screen.getByRole("dialog", { name: "Изменить комплект" });
     fireEvent.click(within(editor).getByRole("button", { name: `Заменить ${source.title}` }));
@@ -96,7 +97,7 @@ describe("Versioned demo package", () => {
     act(() => { vi.advanceTimersByTime(4_250); });
 
     expect(screen.getByRole("combobox", { name: "Версия" })).toHaveValue("2");
-    expect(screen.getByRole("button", { name: "Принять проверку" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Принять и скачать заключение" })).toBeEnabled();
     const current = JSON.parse(screen.getByTestId("current").textContent!);
     expect(current.acceptedAt).toBeNull();
     expect(current.parentVersion).toBe(1);

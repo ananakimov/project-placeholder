@@ -53,7 +53,7 @@ export function recheckDemo(previous: Check, docs: readonly Doc[]): Check {
       return row;
     }
 
-    const { causes, recommendation, partialNote, evidenceDependencies, ...other } = row;
+    const { causes, recommendation, partialNote, breakdown, evidenceDependencies, ...other } = row;
     return {
       ...other,
       sources,

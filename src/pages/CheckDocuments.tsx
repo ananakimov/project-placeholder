@@ -121,7 +121,7 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
                           ? "discrepancy"
                           : "unverified"
                     }
-                    label={d.demoUpload ? "Демо · не распознан" : STATE_LABELS[d.state]}
+                    label={d.demoUpload ? "Файл не распознан" : STATE_LABELS[d.state]}
                   />
                 </TableCell>
                 <TableCell className="tabular-nums text-muted-foreground">

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,11 @@ const tabs = [
   { to: "/checks/$id/documents", label: "Документы" },
 ] as const;
 
-export function CheckHeader({ check, version, accepted = false }: { check: Check; version?: number; accepted?: boolean }) {
+export function CheckHeader({ check, accepted = false, versionControls }: {
+  check: Check;
+  accepted?: boolean;
+  versionControls?: ReactNode;
+}) {
   const heading = checkName(check);
   return (
     <div>
@@ -35,25 +40,28 @@ export function CheckHeader({ check, version, accepted = false }: { check: Check
             })}>
               {check.conclusion}
             </Badge>
-            {check.synthetic && <span>Синтетика</span>}
+            {check.synthetic && <span>Пример</span>}
           </div>
         </div>
       </div>
-      <nav aria-label="Разделы проверки" className="check-tabs mt-6 flex gap-6 border-b" data-print-hide>
-        {tabs.map((t) => (
-          <Link
-            key={t.to}
-            to={t.to}
-            params={{ id: check.id }}
-            search={(previous) => previous.version === undefined ? {} : { version: previous.version }}
-            activeOptions={{ exact: "exact" in t }}
-            className="-mb-px border-b-2 border-transparent pb-2.5 text-sm text-muted-foreground hover:text-foreground"
-            activeProps={{ className: "!border-primary !text-foreground font-medium" }}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <div className="check-header-controls mt-6 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b" data-print-hide>
+        <nav aria-label="Разделы проверки" className="check-tabs flex gap-6">
+          {tabs.map((t) => (
+            <Link
+              key={t.to}
+              to={t.to}
+              params={{ id: check.id }}
+              search={(previous) => previous.version === undefined ? {} : { version: previous.version }}
+              activeOptions={{ exact: "exact" in t }}
+              className="-mb-px border-b-2 border-transparent pb-2.5 text-sm text-muted-foreground hover:text-foreground"
+              activeProps={{ className: "!border-primary !text-foreground font-medium" }}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </nav>
+        {versionControls}
+      </div>
     </div>
   );
 }

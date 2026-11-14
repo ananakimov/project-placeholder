@@ -36,7 +36,7 @@ export function NewCheck() {
   return (
     <div className="upload-page">
       <h1>Новая проверка</h1>
-      <p className="upload-intro">Добавьте КФЗ и первичные документы. В демо-режиме файлы не отправляются.</p>
+      <p className="upload-intro">Добавьте КФЗ и первичные документы. Файлы остаются на устройстве.</p>
       <div className="mt-6 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         <UploadBlock group="report" files={report} error={errors.report} onFiles={takeFiles} onRemove={() => setReport([])} />
         <UploadBlock group="docs" files={docs} error={errors.docs} onFiles={takeFiles} onRemove={(index) => setDocs((previous) => previous.filter((_, i) => i !== index))} />

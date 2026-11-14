@@ -1,6 +1,6 @@
 import { useState, type MouseEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileSearch, Files, Search } from "lucide-react";
+import { FileSearch, Files, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { demoJobName, DemoJobStatus, DemoJobTime } from "@/components/check/DemoHistory";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,6 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
   const results = snapshots.map((version) => ({
     check: version.result, counts: countByStatus(version.result), version,
   }));
-  const allSynthetic = checks.length > 0 && checks.every((check) => check.synthetic);
   const search = q.trim().toLocaleLowerCase("ru");
   const matchesSearch = (check: Check) =>
     `${checkName(check)} ${check.title} ${check.contract}`.toLocaleLowerCase("ru").includes(search);
@@ -95,12 +94,12 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
           <h1>{archive ? "Архив проверок" : "Проверки"}</h1>
           <p>{archive ? "Принятые проверки и их документы." : "Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания."}</p>
         </div>
+        {!archive && <Button asChild className="new-check-button">
+          <Link to="/checks/new"><Plus size={17} aria-hidden /> Новая проверка</Link>
+        </Button>}
       </div>
       <div className="checks-section">
-        <div className="section-heading">
-          <h2>{showAccepted ? "Принятые проверки" : "Ваши проверки"} <span>{total}</span></h2>
-          {allSynthetic && <span className="text-xs text-muted-foreground">Демо-режим · синтетические результаты</span>}
-        </div>
+        {!showAccepted && <div className="section-heading"><h2>Ваши проверки <span>{total}</span></h2></div>}
         <div className="checks-toolbar">
           <div className="filter-tabs" aria-label="Фильтры проверок">
             {!archive && (Object.keys(labels) as Filter[]).map((item) => (
@@ -179,7 +178,6 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                           {versionNumber !== undefined && <small>Версия {versionNumber}</small>}
                           <small>Договор {check.contract}</small>
                           <small className="period">{check.period.replace("–", " — ")}</small>
-                          {!allSynthetic && check.synthetic && <small>Синтетика</small>}
                         </div>
                       </div>
                     </td>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Check } from "@/data/mock";
 
 const STORAGE_KEY = "doccheck.demo-check-history.v1";
@@ -41,11 +41,10 @@ export function useDemoCheckHistory() {
   const [history, setHistory] = useState<History>({});
   const [now, setNow] = useState(0);
   const [ready, setReady] = useState(false);
-  const memory = useRef<History | null>(null);
 
   useEffect(() => {
     function sync() {
-      if (memory.current === null) setHistory(readHistory() ?? {});
+      setHistory(readHistory() ?? {});
       setNow(Date.now());
     }
     sync();
@@ -67,18 +66,15 @@ export function useDemoCheckHistory() {
   function update(check: Check, edit: (versions: DemoCheckVersion[], time: number) => DemoCheckVersion[] | null) {
     if (!ready || !check.synthetic) return false;
     const time = Date.now();
-    const current = memory.current ?? readHistory() ?? history;
+    const current = readHistory();
+    if (!current) return false;
     const versions = edit(current[check.id] ?? [initialVersion(check)], time);
     if (!versions) return false;
     const next = { ...current, [check.id]: versions };
-    if (memory.current === null) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        memory.current = next;
-      }
-    } else {
-      memory.current = next;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      return false;
     }
     setHistory(next);
     setNow(time);

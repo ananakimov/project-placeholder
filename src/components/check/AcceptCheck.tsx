@@ -25,7 +25,7 @@ export function AcceptCheck({ check, version = 1 }: { check: CheckData; version?
         </Button>
       )}
       <span className="text-xs text-muted-foreground">Отметка о завершении работы, без электронной подписи.</span>
-      {error && acceptedAt == null && <p className="text-sm text-destructive" role="alert">Не удалось принять проверку.</p>}
+      {error && acceptedAt == null && <p className="text-sm text-destructive" role="alert">Не удалось сохранить принятие в браузере.</p>}
     </div>
   );
 }

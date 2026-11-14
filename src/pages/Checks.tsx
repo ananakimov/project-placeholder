@@ -97,10 +97,10 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                   (item === "all" && !override ? ctx.demoQueue.entries.length : 0)}</span>
               </button>
             ))}
-            <button type="button" className={cn(showAccepted && "active")} aria-pressed={showAccepted}
+            {!archive && <button type="button" className={cn(showAccepted && "active")} aria-pressed={showAccepted}
               onClick={() => { setAcceptedFilter(true); setFilter("all"); }}>
               Приняты<span>{acceptedCount}</span>
-            </button>
+            </button>}
           </div>
           <div className="toolbar-inputs">
             <div className="search-wrap">

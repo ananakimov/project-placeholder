@@ -1,38 +1,42 @@
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ClipboardList, Plus, ScanLine } from "lucide-react";
+import { ClipboardList, Menu, Plus, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
+
 const items = [
   { title: "Новая проверка", url: "/checks/new", icon: Plus },
-  { title: "Обзор проверок", url: "/checks", icon: ClipboardList },
+  { title: "Проверки", url: "/checks", icon: ClipboardList },
 ] as const;
+
 export function Sidebar() {
-  const path = useRouterState({ select: (s) => s.location.pathname });
+  const [expanded, setExpanded] = useState(false);
+  const path = useRouterState({ select: (state) => state.location.pathname });
+
   return (
-    <aside className="app-sidebar">
-      <Link to="/checks/new" className="brand">
-        <span className="brand-symbol">
-          <ScanLine size={23} />
-        </span>
-        doccheck
-        <span className="brand-dot" />
-      </Link>
-      <nav aria-label="Основная навигация">
-        {items.map((i) => (
-          <Link
-            key={i.url}
-            to={i.url}
-            activeOptions={{ exact: true }}
-            className={cn(
-              "nav-item",
-              (i.url === "/checks"
-                ? path === "/checks" || (path.startsWith("/checks/") && path !== "/checks/new")
-                : path.startsWith(i.url)) && "active",
-            )}
-          >
-            <i.icon size={19} />
-            <span>{i.title}</span>
-          </Link>
-        ))}
+    <aside aria-label="Меню DocCheck" className="app-sidebar" data-expanded={expanded}
+      onPointerLeave={(event) => { if (event.pointerType === "mouse") setExpanded(false); }}
+      onKeyDown={(event) => { if (event.key === "Escape") setExpanded(false); }}>
+      <div className="brand" aria-label="DocCheck">
+        <span className="brand-symbol"><ScanLine size={23} aria-hidden="true" /></span>
+        <span className="brand-name">doccheck<span className="brand-dot" /></span>
+      </div>
+      <button type="button" className="sidebar-toggle" aria-controls="app-sidebar-nav"
+        aria-expanded={expanded} aria-label={expanded ? "Свернуть меню" : "Развернуть меню"}
+        onClick={() => setExpanded((previous) => !previous)}><Menu size={20} aria-hidden="true" /></button>
+      <nav id="app-sidebar-nav" aria-label="Основная навигация">
+        {items.map((item) => {
+          const active = item.url === "/checks"
+            ? /^\/checks\/?$/.test(path) || (path.startsWith("/checks/") && !/^\/checks\/new\/?$/.test(path))
+            : /^\/checks\/new\/?$/.test(path);
+          return (
+            <Link key={item.url} to={item.url} aria-label={item.title} aria-current={active ? "page" : undefined}
+              activeOptions={{ exact: true }} className={cn("nav-item", active && "active")}
+              onClick={() => setExpanded(false)}>
+              <item.icon size={19} aria-hidden="true" />
+              <span>{item.title}</span>
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

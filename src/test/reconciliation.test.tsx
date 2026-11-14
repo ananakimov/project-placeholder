@@ -29,21 +29,20 @@ function openDocument(check: Check, id: string, index = 0) {
   return trigger;
 }
 function closeDocument() {
-  fireEvent.click(screen.getByRole("button", { name: "Вернуться к таблице" }));
+  fireEvent.click(screen.getByRole("button", { name: "Скрыть источник документа" }));
 }
 
 describe("Reconciliation workspace", () => {
   it("expands the row in place; opening its document resets the panel to the exact source bbox", () => {
     desk();
     openDocument(b, "b-1");
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Объяснение и рекомендация" }), { key: "Enter" });
-    expect(within(screen.getByRole("dialog")).getByText("Что не сходится")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Источник документа" })).toBeInTheDocument();
     closeDocument();
     const details = expand(b, "b-8");
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
     expect(within(details).getByText("Рекомендация")).toBeInTheDocument();
     openDocument(b, "b-8");
-    expect(screen.getByRole("tab", { name: "Источник" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("region", { name: "Источник документа" })).toBeInTheDocument();
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 48\s570,00/)).toHaveStyle({ left: "66%", top: "34%", width: "20%", height: "3%" });
   });
@@ -77,8 +76,8 @@ describe("Reconciliation workspace", () => {
     expect(screen.queryByText("Что не сходится")).not.toBeInTheDocument();
     openDocument(a, "a-1");
     expect(screen.queryByRole("tab", { name: "Объяснение и рекомендация" })).not.toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Источник" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Правило проверки" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Источник документа" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "Правило проверки" })).not.toBeInTheDocument();
   });
   it("moves between actual discrepancies, expanding each and excluding service totals", () => {
     desk();
@@ -102,7 +101,7 @@ describe("Reconciliation workspace", () => {
     openDocument(b, "b-1");
     fireEvent.keyDown(screen.getByRole("tab", { name: "Ведомость ЗП, август 2026, источник 3" }), { key: "Enter" });
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 375\s000,00/)).toBeInTheDocument();
-    expect(screen.getByText("Сумма показателя собрана из 4 документов.")).toBeInTheDocument();
+    expect(screen.getByText("3 / 4")).toBeInTheDocument();
   });
   it("does not sum ambiguous document candidates as if they were accepted addends", () => {
     const c = checks.find((check) => check.id === "c")!;
@@ -111,10 +110,10 @@ describe("Reconciliation workspace", () => {
     expect(screen.queryByLabelText("Сумма документов: Аренда помещения")).not.toBeInTheDocument();
   });
   it("clears stale evidence for empty searches and keeps the expansion after reset", () => {
-    desk(); expand(b, "b-1");
+    desk(); openDocument(b, "b-1");
     fireEvent.change(screen.getByRole("textbox", { name: "Поиск показателя или документа" }), { target: { value: "несуществующий документ" } });
     expect(screen.getByText("Показатели не найдены")).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
     expect(screen.getByRole("region", { name: "Подробности: Оплата труда" })).toBeInTheDocument();
   });
@@ -138,28 +137,24 @@ describe("Reconciliation workspace", () => {
     expect(within(details).getByText("Рекомендация")).toBeInTheDocument();
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
   });
-  it("preserves the page, zoom and hidden highlight when expanding and restoring the source", () => {
-    desk(a); openDocument(a, "a-7");
-    expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent("АР-Q3 · 30.09.2026 · СИН-2026/11");
+  it("keeps the selected page and zoom when the source panel is collapsed and restored", () => {
+    desk();
+    openDocument(b, "b-8");
     fireEvent.click(screen.getByRole("button", { name: "Увеличить масштаб" }));
-    fireEvent.click(screen.getByRole("button", { name: "Предыдущая страница" }));
-    expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Распознанное поле: Дата: 30.09.2026")).toHaveAttribute("data-kind", "date");
-    fireEvent.click(screen.getByRole("button", { name: "Скрыть подсветку" }));
-    fireEvent.click(screen.getByRole("button", { name: "Развернуть источник на весь экран" }));
-    expect(screen.getByRole("dialog")).toHaveAttribute("data-fullscreen", "true");
-    expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Распознанное поле:/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Показать подсветку" })).toBeInTheDocument();
+    closeDocument();
+    expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
-    fireEvent.click(screen.getByRole("button", { name: "Свернуть источник в боковую панель" }));
-    expect(screen.getByRole("dialog")).toHaveAttribute("data-fullscreen", "false");
-    expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Показать подсветку" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
-    fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toHaveAttribute("data-kind", "money");
+  });
+  it("does not show one indicator's evidence next to another active discrepancy", () => {
+    desk();
+    openDocument(b, "b-1");
+    fireEvent.click(screen.getByRole("button", { name: "Следующее расхождение" }));
+    expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
+    expect(screen.getByRole("button", { name: "Оплата труда" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Источник документа" })).toHaveTextContent("Оплата труда");
   });
   it("keeps metadata and highlights synchronized across documents", () => {
     desk(); openDocument(b, "b-1");
@@ -182,7 +177,7 @@ describe("Document location controls", () => {
     const row = a.rows[0]!;
     const source = row.sources[0]!;
     const doc = a.docs.find((d) => d.id === source.docId)!;
-    render(<SourceViewer row={row} source={source} doc={doc} onWhy={() => {}} />);
+    render(<SourceViewer row={row} source={source} doc={doc} />);
     fireEvent.click(screen.getByRole("checkbox", { name: "Подсветка: Суммы" }));
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Распознанное поле: Дата:/)).toBeInTheDocument();
@@ -196,7 +191,7 @@ describe("Document location controls", () => {
     const row = a.rows.find((r) => r.id === "a-7")!;
     const source = row.sources[0]!;
     const doc = a.docs.find((d) => d.id === source.docId)!;
-    render(<SourceViewer row={row} source={source} doc={doc} onWhy={() => {}} />);
+    render(<SourceViewer row={row} source={source} doc={doc} />);
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Предыдущая страница" }));
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
@@ -212,7 +207,7 @@ describe("Document location controls", () => {
     const row = a.rows[0]!;
     const source = row.sources[0]!;
     const doc = a.docs.find((d) => d.id === source.docId)!;
-    render(<SourceViewer row={row} source={source} doc={doc} onWhy={() => {}} />);
+    render(<SourceViewer row={row} source={source} doc={doc} />);
     for (let i = 0; i < 3; i++)
       fireEvent.click(screen.getByRole("button", { name: "Увеличить масштаб" }));
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("175%");

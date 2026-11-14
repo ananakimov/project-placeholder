@@ -1,13 +1,12 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowDown, ArrowUp, Check, CheckCheck, ChevronRight, CircleHelp, FileText, TriangleAlert, Maximize2, Minimize2, Search, X } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Check, CheckCheck, ChevronRight, CircleHelp, FileText, TriangleAlert, Eye, EyeOff, Search, X } from "lucide-react";
 import { Money } from "@/components/Money";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { SidePanel, type PanelTab } from "@/components/check/SidePanel";
+import { SidePanel } from "@/components/check/SidePanel";
+import { fieldSource } from "@/components/check/document-annotations";
 import { AdditionalChecks } from "@/components/check/AdditionalChecks";
 import { CheckConclusion } from "@/pages/CheckConclusion";
 import { countByStatus } from "@/pages/Checks";
-import type { Breakdown, Check as CheckData, Row, Status } from "@/data/mock";
+import type { Breakdown, Check as CheckData, ExcludedDoc, Row, SourceRef, Status } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
 type Filter = "all" | Status;
@@ -18,6 +17,7 @@ const statusLabels: Record<Status, string> = {
 };
 const statusIcons = { verified: Check, discrepancy: TriangleAlert, unverified: CircleHelp };
 const statusFilter = (row: Row) => !row.service && !row.nested;
+type EvidenceSelection = { rowId: string; index: number; sources: readonly SourceRef[] };
 
 export function CheckDetail({ check }: { check: CheckData }) {
   return <Reconciliation key={check.id} check={check} />;
@@ -26,38 +26,38 @@ function Reconciliation({ check }: { check: CheckData }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [selection, setSelection] = useState(() => ({ rowId: (check.rows.find((row) => statusFilter(row) && row.status === "discrepancy") ?? check.rows[0])?.id ?? "", sourceIndex: 0 }));
+  const [rowId, setRowId] = useState(
+    () => (check.rows.find((row) => statusFilter(row) && row.status === "discrepancy") ?? check.rows[0])?.id ?? "",
+  );
+  const [evidence, setEvidence] = useState<EvidenceSelection | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
-  const [sourceExpanded, setSourceExpanded] = useState(false);
-  const [tab, setTab] = useState<PanelTab>("source");
-  const [focus, setFocus] = useState(false);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const eye = useRef<HTMLButtonElement>(null);
+  const workspace = useRef<HTMLDivElement>(null);
   const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const n = countByStatus(check);
   const total = n.verified + n.discrepancy + n.unverified;
   const discrepancies = check.rows.filter((row) => statusFilter(row) && row.status === "discrepancy");
-  const issueIndex = discrepancies.findIndex((row) => row.id === selection.rowId);
+  const issueIndex = discrepancies.findIndex((row) => row.id === rowId);
   const docById = useMemo(() => new Map(check.docs.map((doc) => [doc.id, doc])), [check.docs]);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return check.rows.filter((row) => (filter === "all" || (statusFilter(row) && row.status === filter)) &&
       (!q || row.name.toLowerCase().includes(q) || row.sources.some((source) => `${docById.get(source.docId)?.title} ${docById.get(source.docId)?.number}`.toLowerCase().includes(q))));
   }, [check.rows, filter, query, docById]);
-  const selected = rows.find((row) => row.id === selection.rowId) ?? null;
+  const evidenceRow = evidence && check.rows.find((row) => row.id === evidence.rowId);
+  const selected = rows.find((row) => row.id === rowId) ?? null;
+  const sourceVisible = panelOpen && !!evidenceRow;
+
   useEffect(() => {
-    if (rows.some((row) => row.id === selection.rowId)) return;
+    if (rows.some((row) => row.id === rowId)) return;
     const next = rows.find((row) => statusFilter(row) && row.status === "discrepancy") ?? rows[0];
-    setSelection({ rowId: next?.id ?? "", sourceIndex: 0 });
-    setPanelOpen(false);
-  }, [rows, selection.rowId]);
+    setRowId(next?.id ?? "");
+  }, [rows, rowId]);
   useEffect(() => {
-    if (!focus) return;
-    const before = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setFocus(false); };
-    window.addEventListener("keydown", close);
-    return () => { document.body.style.overflow = before; window.removeEventListener("keydown", close); };
-  }, [focus]);
+    if (evidence && !rows.some((row) => row.id === evidence.rowId)) setPanelOpen(false);
+  }, [evidence, rows]);
+
   useEffect(() => {
     if (!scrollTarget) return;
     const target = document.getElementById(`indicator-${scrollTarget}`);
@@ -66,27 +66,68 @@ function Reconciliation({ check }: { check: CheckData }) {
     setScrollTarget(null);
   }, [scrollTarget, rows]);
   function toggleRow(rowId: string) {
-    setSelection({ rowId, sourceIndex: 0 });
+    if (evidence?.rowId !== rowId) setPanelOpen(false);
+    setRowId(rowId);
     setExpanded((previous) => {
       const next = new Set(previous);
       next.has(rowId) ? next.delete(rowId) : next.add(rowId);
       return next;
     });
   }
-  function openSource(rowId: string, sourceIndex: number, trigger: HTMLElement) {
+  function showEvidence(next: EvidenceSelection, trigger: HTMLElement) {
     returnFocus.current = trigger;
-    setSelection({ rowId, sourceIndex });
-    setTab("source");
-    setFocus(false);
-    setSourceExpanded(false);
+    if (!rows.some((row) => row.id === next.rowId)) {
+      setQuery("");
+      setFilter("all");
+    }
+    setEvidence(next);
     setPanelOpen(true);
+    requestAnimationFrame(() => {
+      workspace.current?.scrollIntoView?.({
+        block: window.matchMedia?.("(max-width: 700px)")?.matches ? "start" : "nearest",
+      });
+      const table = workspace.current?.querySelector<HTMLElement>(".source-workspace-table");
+      const indicator = document.getElementById(`indicator-${next.rowId}`);
+      if (table && indicator && table.scrollHeight > table.clientHeight) {
+        table.scrollTop += indicator.getBoundingClientRect().top - table.getBoundingClientRect().top - 48;
+      }
+      eye.current?.focus({ preventScroll: true });
+    });
+  }
+  function openSource(row: Row, index: number, trigger: HTMLElement) {
+    setRowId(row.id);
+    showEvidence({ rowId: row.id, index, sources: row.sources }, trigger);
+  }
+  function openDiagnostic(docId: string, trigger: HTMLElement) {
+    const row = check.rows.find((entry) => entry.sources.some((source) => source.docId === docId));
+    const source = row?.sources.find((entry) => entry.docId === docId);
+    if (!row || !source) return;
+    setRowId(row.id);
+    showEvidence({ rowId: row.id, index: 0, sources: [source] }, trigger);
+  }
+  function openExcluded(item: ExcludedDoc, trigger: HTMLElement) {
+    const row = check.rows.find((entry) => item.rowIds?.includes(entry.id)) ?? check.rows[0];
+    const doc = check.docs.find((entry) => entry.id === item.docId);
+    const field = doc?.fields.find((entry) => entry.label === item.field);
+    if (!row || !doc || !field) return;
+    setRowId(row.id);
+    showEvidence({ rowId: row.id, index: 0, sources: [fieldSource(doc, field)] }, trigger);
+  }
+  function hideEvidence() {
+    setPanelOpen(false);
+    requestAnimationFrame(() => {
+      const trigger = returnFocus.current;
+      if (trigger?.isConnected) trigger.focus({ preventScroll: !window.matchMedia?.("(max-width: 700px)")?.matches });
+      else eye.current?.focus({ preventScroll: true });
+    });
   }
   function moveIssue(direction: number) {
     const index = issueIndex < 0 ? (direction > 0 ? 0 : discrepancies.length - 1) : issueIndex + direction;
     const row = discrepancies[index];
     if (!row) return;
+    if (evidence?.rowId !== row.id) setPanelOpen(false);
     setQuery(""); setFilter("discrepancy");
-    setSelection({ rowId: row.id, sourceIndex: 0 });
+    setRowId(row.id);
     setExpanded((previous) => new Set(previous).add(row.id));
     setScrollTarget(row.id);
   }
@@ -99,7 +140,9 @@ function Reconciliation({ check }: { check: CheckData }) {
   return (
     <div className="reconciliation-page">
       <CheckConclusion check={check}>
-      <section className={cn("min-w-0 bg-card", focus && "reconcile-focus overflow-auto p-4")} aria-label="Рабочее место сверки"
+      <div ref={workspace} className="source-workspace" data-source-open={sourceVisible}
+        onKeyDown={(event) => { if (event.key === "Escape" && sourceVisible) hideEvidence(); }}>
+      <section className="source-workspace-table min-w-0 bg-card" aria-label="Рабочее место сверки"
         onKeyDown={(event) => {
           if ((event.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
           if (event.altKey && (event.key === "ArrowDown" || event.key === "ArrowUp")) { event.preventDefault(); moveIssue(event.key === "ArrowDown" ? 1 : -1); }
@@ -112,7 +155,6 @@ function Reconciliation({ check }: { check: CheckData }) {
             </span>
             <button aria-label="Предыдущее расхождение" title="Предыдущее расхождение · Alt + ↑" disabled={!discrepancies.length || issueIndex === 0} onClick={() => moveIssue(-1)}><ArrowUp size={16} /></button>
             <button aria-label="Следующее расхождение" title="Следующее расхождение · Alt + ↓" disabled={!discrepancies.length || issueIndex === discrepancies.length - 1} onClick={() => moveIssue(1)}><ArrowDown size={16} /></button>
-            <button aria-label={focus ? "Выйти из полноэкранного режима" : "На весь экран"} aria-pressed={focus} onClick={() => setFocus((previous) => !previous)}>{focus ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
           </div>
         </div>
         <div className="reconcile-filters !mx-0" aria-label="Статус показателя">
@@ -163,7 +205,7 @@ function Reconciliation({ check }: { check: CheckData }) {
                     <BreakdownList items={row.breakdown} />
                   </section>}
                   <p className="text-sm"><strong>{statusLabels[row.status]}</strong>{row.reason && ` · ${row.reason}`}</p>
-                  <RowDocuments row={row} check={check} onOpen={(index, trigger) => openSource(row.id, index, trigger)} />
+                  <RowDocuments row={row} check={check} onOpen={(index, trigger) => openSource(row, index, trigger)} onExcluded={openExcluded} />
                   {row.partialNote && <p className="text-sm text-muted-foreground">{row.partialNote}</p>}
                   {row.status !== "verified" && (
                     <>
@@ -182,30 +224,41 @@ function Reconciliation({ check }: { check: CheckData }) {
         {!rows.length && <div className="reconcile-empty"><Search size={25} /><strong>Показатели не найдены</strong><p>Измените запрос или выберите другой статус.</p><button onClick={() => { setQuery(""); setFilter("all"); }}>Сбросить фильтры</button></div>}
         <div className="reconcile-left-footer"><span>Показателей: {rows.filter(statusFilter).length} из {total}</span></div>
       </section>
-      <AdditionalChecks check={check} onIndicator={(id) => {
+      <aside className="source-workspace-rail" aria-label="Управление источником">
+        <button ref={eye} type="button" className="source-workspace-toggle" disabled={!evidence}
+          aria-label={sourceVisible ? "Скрыть источник документа" : "Показать источник документа"}
+          title={evidence ? (sourceVisible ? "Скрыть источник документа" : "Показать источник документа") : "Выберите документ в таблице"}
+          aria-expanded={sourceVisible} aria-controls="check-source-panel"
+          onClick={() => {
+            if (sourceVisible) hideEvidence();
+            else if (evidence) {
+              setRowId(evidence.rowId);
+              if (!rows.some((row) => row.id === evidence.rowId)) {
+                setQuery("");
+                setFilter("all");
+              }
+              setPanelOpen(true);
+            }
+          }}>
+          {sourceVisible ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
+        </button>
+      </aside>
+      <section id="check-source-panel" aria-label="Источник документа"
+        className="source-workspace-panel compact-source" inert={!sourceVisible} aria-hidden={!sourceVisible}>
+        {evidence && evidenceRow && (
+          <SidePanel check={check} row={evidenceRow} sources={evidence.sources} sourceIndex={evidence.index}
+            onSourceChange={(index) => setEvidence((previous) => previous && { ...previous, index })} />
+        )}
+      </section>
+      </div>
+      <AdditionalChecks check={check} onExcluded={openExcluded} onDiagnostic={openDiagnostic} onIndicator={(id) => {
         setQuery("");
         setFilter("all");
+        if (evidence?.rowId !== id) setPanelOpen(false);
+        setRowId(id);
         setExpanded((previous) => new Set(previous).add(id));
         setScrollTarget(id);
       }} />
-      <Sheet open={panelOpen && !!selected} onOpenChange={setPanelOpen}>
-        <SheetContent side="right" data-fullscreen={sourceExpanded} className="source-sheet flex w-full flex-col gap-0 !p-0 sm:max-w-[800px]" onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
-          <div className="source-sheet-header">
-            <SheetTitle>Источник документа</SheetTitle>
-            <SheetDescription className="sr-only">Документ и подсветка выбранного значения</SheetDescription>
-            <div className="source-sheet-header-actions">
-              <Button variant="ghost" size="sm" aria-label={sourceExpanded ? "Свернуть источник в боковую панель" : "Развернуть источник на весь экран"} title={sourceExpanded ? "Свернуть источник в боковую панель" : "Развернуть источник на весь экран"} aria-pressed={sourceExpanded} onClick={() => setSourceExpanded((previous) => !previous)}>
-                {sourceExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                <span className="hidden sm:inline">{sourceExpanded ? "Свернуть" : "На весь экран"}</span>
-              </Button>
-              <SheetClose asChild><Button variant="ghost" size="sm" aria-label="Вернуться к таблице">К таблице</Button></SheetClose>
-            </div>
-          </div>
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <SidePanel check={check} row={selected} sourceIndex={selection.sourceIndex} onSourceChange={(sourceIndex) => setSelection((previous) => ({ ...previous, sourceIndex }))} tab={tab} onTab={setTab} />
-          </div>
-        </SheetContent>
-      </Sheet>
       </CheckConclusion>
     </div>
   );
@@ -225,10 +278,11 @@ function Measure({ value, unit }: { value: string | null; unit?: string | undefi
   return <><Money value={value} />{value !== null && <small> {unit ?? "₽"}</small>}</>;
 }
 
-function RowDocuments({ row, check, onOpen }: {
+function RowDocuments({ row, check, onOpen, onExcluded }: {
   row: Row;
   check: CheckData;
   onOpen: (index: number, trigger: HTMLElement) => void;
+  onExcluded: (item: ExcludedDoc, trigger: HTMLElement) => void;
 }) {
   const sources = row.sources.map((source) => ({
     source,
@@ -262,8 +316,14 @@ function RowDocuments({ row, check, onOpen }: {
         ))}
       </ul>}
       {excluded.length > 0 && <ul className="space-y-1 text-sm text-muted-foreground" aria-label="Исключённые из расчёта документы">
-        {excluded.map((item) => <li key={item.docId}>{item.file} · {item.reason}</li>)}
+        {excluded.map((item) => <li key={item.docId}>
+          <button type="button" className="text-left text-primary underline"
+            onClick={(event) => onExcluded(item, event.currentTarget)}>{item.file}</button>
+          <span> · {item.reason}. {item.impact}</span>
+        </li>)}
       </ul>}
+      {!aggregate && row.expected === null && sources.length > 0 &&
+        <p className="text-xs text-muted-foreground">Документы доступны для проверки. Полная ожидаемая сумма не установлена.</p>}
       {aggregate && <p className="flex flex-wrap gap-x-1 text-sm tabular-nums" aria-label={`Сумма документов: ${row.name}`}>
         {terms.map((amount, index) => <span key={index}>{index > 0 && " + "}<Money value={amount} /></span>)}
         <span> = <strong><Measure value={row.expected} unit={row.unit} /></strong></span>

@@ -36,7 +36,7 @@ function setup() {
 describe("Single accountant workflow", () => {
   it("keeps result navigation free of role, journal and manual workflow controls", () => {
     setup();
-    const sidebar = screen.getByRole("complementary");
+    const sidebar = screen.getByRole("complementary", { name: "Меню DocCheck" });
     expect(within(sidebar).queryByText("Бухгалтер", { exact: true })).not.toBeInTheDocument();
     expect(within(sidebar).queryByText("Анна Иванова")).not.toBeInTheDocument();
     expect(within(sidebar).queryByText("АИ", { exact: true })).not.toBeInTheDocument();

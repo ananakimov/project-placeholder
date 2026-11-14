@@ -95,6 +95,7 @@ describe("Versioned demo package", () => {
     expect(screen.getByRole("button", { name: "Принять проверку" })).toBeEnabled();
     const current = JSON.parse(screen.getByTestId("current").textContent!);
     expect(current.acceptedAt).toBeNull();
+    expect(current.parentVersion).toBe(1);
     expect(current.result.rows.find((row: { id: string }) => row.id === affected.id))
       .toMatchObject({ status: "unverified", expected: null, delta: null });
     expect(current.result.docs.map((doc: { title: string }) => doc.title)).toEqual(expect.arrayContaining(

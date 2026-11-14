@@ -33,6 +33,15 @@ function closeDocument() {
 }
 
 describe("Reconciliation workspace", () => {
+  it("opens the active indicator's first document from the right rail on entry", () => {
+    desk();
+    const toggle = screen.getByRole("button", { name: "Показать источник документа" });
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
+    const panel = within(screen.getByRole("region", { name: "Источник документа" }));
+    expect(panel.getByText("Оплата труда")).toBeInTheDocument();
+    expect(panel.getByLabelText(/Подсвеченный фрагмент/)).toBeInTheDocument();
+  });
   it("expands the row in place; opening its document resets the panel to the exact source bbox", () => {
     desk();
     openDocument(b, "b-1");

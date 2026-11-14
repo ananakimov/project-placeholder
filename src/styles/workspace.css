@@ -3286,10 +3286,16 @@ kbd {
   top: 12px;
   display: grid;
   place-items: center;
+  gap: 6px;
   width: 33px;
-  height: 36px;
+  padding: 8px 4px;
   border-radius: 5px;
   color: var(--ui-primary);
+}
+.source-workspace-toggle span {
+  writing-mode: vertical-rl;
+  font-size: 11px;
+  font-weight: 500;
 }
 .source-workspace-toggle:hover:not(:disabled) { background: var(--ui-selected); }
 .source-workspace-toggle:disabled { opacity: .42; }

@@ -47,6 +47,8 @@ function Reconciliation({ check }: { check: CheckData }) {
   }, [check.rows, filter, query, docById]);
   const evidenceRow = evidence && check.rows.find((row) => row.id === evidence.rowId);
   const selected = rows.find((row) => row.id === rowId) ?? null;
+  const hasDocument = (row: Row) => row.sources.some((source) => docById.has(source.docId));
+  const firstSourceRow = selected && hasDocument(selected) ? selected : rows.find(hasDocument);
   const sourceVisible = panelOpen && !!evidenceRow;
 
   useEffect(() => {
@@ -74,7 +76,7 @@ function Reconciliation({ check }: { check: CheckData }) {
       return next;
     });
   }
-  function showEvidence(next: EvidenceSelection, trigger: HTMLElement) {
+  function showEvidence(next: EvidenceSelection, trigger: HTMLElement | null) {
     returnFocus.current = trigger;
     if (!rows.some((row) => row.id === next.rowId)) {
       setQuery("");
@@ -93,6 +95,21 @@ function Reconciliation({ check }: { check: CheckData }) {
       }
       eye.current?.focus({ preventScroll: true });
     });
+  }
+  function toggleEvidence() {
+    if (sourceVisible) {
+      hideEvidence();
+      return;
+    }
+    if (evidence) {
+      setRowId(evidence.rowId);
+      showEvidence(evidence, returnFocus.current);
+      return;
+    }
+    if (!firstSourceRow) return;
+    const index = firstSourceRow.sources.findIndex((source) => docById.has(source.docId));
+    setRowId(firstSourceRow.id);
+    showEvidence({ rowId: firstSourceRow.id, index, sources: firstSourceRow.sources }, null);
   }
   function openSource(row: Row, index: number, trigger: HTMLElement) {
     setRowId(row.id);
@@ -225,22 +242,13 @@ function Reconciliation({ check }: { check: CheckData }) {
         <div className="reconcile-left-footer"><span>Показателей: {rows.filter(statusFilter).length} из {total}</span></div>
       </section>
       <aside className="source-workspace-rail" aria-label="Управление источником">
-        <button ref={eye} type="button" className="source-workspace-toggle" disabled={!evidence}
+        <button ref={eye} type="button" className="source-workspace-toggle" disabled={!evidence && !firstSourceRow}
           aria-label={sourceVisible ? "Скрыть источник документа" : "Показать источник документа"}
-          title={evidence ? (sourceVisible ? "Скрыть источник документа" : "Показать источник документа") : "Выберите документ в таблице"}
+          title={sourceVisible ? "Скрыть источник" : "Открыть источник"}
           aria-expanded={sourceVisible} aria-controls="check-source-panel"
-          onClick={() => {
-            if (sourceVisible) hideEvidence();
-            else if (evidence) {
-              setRowId(evidence.rowId);
-              if (!rows.some((row) => row.id === evidence.rowId)) {
-                setQuery("");
-                setFilter("all");
-              }
-              setPanelOpen(true);
-            }
-          }}>
+          onClick={toggleEvidence}>
           {sourceVisible ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
+          <span aria-hidden="true">Источник</span>
         </button>
       </aside>
       <section id="check-source-panel" aria-label="Источник документа"

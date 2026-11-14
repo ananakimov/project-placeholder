@@ -1,12 +1,13 @@
 import { useState, type MouseEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileSearch, Files, Plus, Search } from "lucide-react";
+import { FileSearch, Files, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { demoJobName, DemoJobStatus, DemoJobTime } from "@/components/check/DemoHistory";
 import { Input } from "@/components/ui/input";
 import { type Check } from "@/data/mock";
 import { useChecks } from "@/context/ChecksContext";
 import { cn } from "@/lib/utils";
+import { checkLocation } from "@/lib/check-location";
 import { checkName } from "@/lib/check-name";
 
 export function countByStatus(c: Check) {
@@ -50,13 +51,13 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
   const showAccepted = archive || acceptedFilter;
   const activeResults = allChecks.map(ctx.checkHistory.current).filter((version) => version.acceptedAt === null);
   const pendingResults = allChecks.flatMap((check) => ctx.checkHistory.versions(check)
-    .filter((version) => version.readyAt > ctx.checkHistory.now)
+    .filter((version) => version.number > 1 && version.readyAt > ctx.checkHistory.now)
     .map((pending) => ({ pending, current: ctx.checkHistory.current(check) })));
   const snapshots = showAccepted
     ? allChecks.flatMap((check) => ctx.checkHistory.versions(check).filter((version) => version.acceptedAt !== null))
     : activeResults;
   const checks = snapshots.map((snapshot) => snapshot.result);
-  const activeJobs = override ? [] : ctx.demoQueue.entries;
+  const activeJobs = override ? [] : ctx.demoQueue.entries.filter((job) => !(job.complete && job.result));
   const jobs = showAccepted ? [] : activeJobs;
   const total = checks.length + jobs.length + (showAccepted ? 0 : pendingResults.length);
   const acceptedCount = allChecks.reduce((count, check) => count + ctx.checkHistory.versions(check)
@@ -72,7 +73,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
   const entries = [
     ...results.filter(({ check, counts }) => matches(check, counts, filter) && matchesSearch(check))
       .map((result) => ({ id: result.check.id, time: result.version.createdAt, result })),
-    ...jobs.filter((job) => filter === "all" && demoJobName(job.id).toLocaleLowerCase("ru").includes(search))
+    ...jobs.filter((job) => filter === "all" && demoJobName(job).toLocaleLowerCase("ru").includes(search))
       .map((job) => ({ id: job.id, time: job.createdAt, job })),
     ...pendingResults.filter(({ pending }) => !showAccepted && filter === "all" && matchesSearch(pending.result))
       .map(({ pending, current }) => ({ id: pending.result.id, time: pending.createdAt, pending, current })),
@@ -83,8 +84,8 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
       event.shiftKey || event.altKey || (event.target as HTMLElement).closest(
         'a, button, input, select, textarea, label, [role="button"], [contenteditable="true"]',
       )) return;
-    const params = { id };
-    void navigate(version === undefined ? { to: "/checks/$id", params } : { to: "/checks/$id", params, search: { version } });
+    const { params, search } = checkLocation(id, version);
+    void navigate({ to: "/checks/$id", params, ...(Object.keys(search).length > 0 && { search }) });
   }
 
   return (
@@ -94,9 +95,6 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
           <h1>{archive ? "Архив проверок" : "Проверки"}</h1>
           <p>{archive ? "Принятые проверки и их документы." : "Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания."}</p>
         </div>
-        {!archive && <Button asChild className="new-check-button">
-          <Link to="/checks/new"><Plus size={17} aria-hidden /> Новая проверка</Link>
-        </Button>}
       </div>
       <div className="checks-section">
         {!showAccepted && <div className="section-heading"><h2>Ваши проверки <span>{total}</span></h2></div>}
@@ -139,8 +137,14 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                 if ("job" in entry) {
                   const { job } = entry;
                   return <tr key={`job:${job.id}`}>
-                    <td className="break-all font-medium">{demoJobName(job.id)}</td>
-                    <td><DemoJobStatus status={job.status} /></td>
+                    <td className="font-medium">
+                      {demoJobName(job)}
+                      {job.kind === "sample" && <small className="block text-muted-foreground">Демонстрация</small>}
+                    </td>
+                    <td>
+                      <DemoJobStatus status={job.status} failed={job.failed} />
+                      {job.progress !== null && <span className="ml-1 text-xs tabular-nums">{job.progress}%</span>}
+                    </td>
                     <td aria-label="Покрытие отсутствует">—</td>
                     <td>{job.documents}</td>
                     <td className="date-cell"><DemoJobTime createdAt={job.createdAt} /></td>
@@ -151,7 +155,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                   return <tr key={`pending:${entry.id}:${pending.number}`}>
                     <td>
                       <div className="font-medium">{checkName(pending.result)} · Версия {pending.number}</div>
-                      <Link to="/checks/$id" params={{ id: entry.id }} search={{ version: current.number }} className="text-xs underline">
+                      <Link to="/checks/$id" {...checkLocation(entry.id, current.number)} className="text-xs underline">
                         Предыдущая версия
                       </Link>
                     </td>
@@ -174,7 +178,8 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                       <div className="check-title-cell">
                         <span className={cn("file-symbol", theme)}><FileSearch size={21} aria-hidden="true" /></span>
                         <div>
-                          <Link to="/checks/$id" params={{ id: check.id }} search={versionNumber === undefined ? {} : { version: versionNumber }}>{checkName(check)}</Link>
+                          <Link to="/checks/$id" {...checkLocation(check.id, versionNumber)}>{checkName(check)}</Link>
+                          {check.createdAt !== undefined && <small>Демонстрация</small>}
                           {versionNumber !== undefined && <small>Версия {versionNumber}</small>}
                           <small>Договор {check.contract}</small>
                           <small className="period">{check.period.replace("–", " — ")}</small>
@@ -189,7 +194,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                       </small>
                     </td>
                     <td><span className="document-count"><Files size={15} aria-hidden="true" />{check.docs.length}</span></td>
-                    <td className="date-cell">{check.date}</td>
+                    <td className="date-cell">{check.createdAt === undefined ? check.date : <DemoJobTime createdAt={version.createdAt} />}</td>
                   </tr>
                 );
               })}

@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { FilePlus2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { fileExtension } from "@/components/UploadFiles";
+import { fileExtension, primaryFileAccept, primaryFileTypes } from "@/components/UploadFiles";
 import { isKfz } from "@/data/demo-recheck";
 import type { Doc } from "@/data/mock";
 
@@ -30,8 +30,8 @@ export function EditPackage({ docs, disabled, submit }: {
 
   function addFiles(files: FileList | null) {
     if (!files?.length) return;
-    const valid = Array.from(files).filter((file) => ["PDF", "PNG", "DOCX", "XLSX", "XLS"].includes(fileExtension(file.name)));
-    setError(valid.length !== files.length ? "Поддерживаются PDF, PNG, DOCX, XLSX и XLS." : "");
+    const valid = Array.from(files).filter((file) => primaryFileTypes.includes(fileExtension(file.name)));
+    setError(valid.length !== files.length ? `Поддерживаются: ${primaryFileTypes.join(", ")}.` : "");
     if (!valid.length) return;
     const additions: Doc[] = valid.map((file) => ({
       id: crypto.randomUUID(), title: file.name, fileName: file.name, type: fileExtension(file.name),
@@ -57,7 +57,7 @@ export function EditPackage({ docs, disabled, submit }: {
           Демо-проверка использует сохранённые данные примера. Для добавленных файлов сохраняются названия и тип.
           Распознавание новых файлов и кеш OCR требуют серверной обработки.
         </DialogDescription>
-        <input ref={input} type="file" aria-label="Файлы комплекта" hidden accept=".pdf,.png,.docx,.xlsx,.xls"
+        <input ref={input} type="file" aria-label="Файлы комплекта" hidden accept={primaryFileAccept}
           onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} />
         <ul aria-label="Состав комплекта" className="max-h-[45dvh] divide-y overflow-y-auto rounded-md border">
           {draft.map((doc) => (

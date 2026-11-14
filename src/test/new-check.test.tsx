@@ -10,8 +10,8 @@ import { checks } from "@/data/mock";
 import { SAMPLE_FILES, SAMPLE_REPORT, SAMPLE_DOCS } from "@/data/sample-files";
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ params, search, children }: { params: { id: string }; search: Record<string, string>; children: ReactNode }) =>
-    <a href={`/checks/${params.id}?${new URLSearchParams(search)}`}>{children}</a>,
+  Link: ({ params, search, children, "aria-labelledby": label }: { params: { id: string }; search: Record<string, string>; children: ReactNode; "aria-labelledby": string }) =>
+    <a href={`/checks/${params.id}?${new URLSearchParams(search)}`} aria-labelledby={label}>{children}</a>,
 }));
 function CheckProbe() {
   return <output data-testid="check">{JSON.stringify(useChecks().getCheck("g"))}</output>;
@@ -69,7 +69,7 @@ describe("Single-screen new check", () => {
     expect(Number(first!.getByRole("progressbar").getAttribute("aria-valuenow"))).toBeGreaterThan(12);
     tick(1_500);
     stage(first, "Извлечение данных");
-    expect(first!.getByText("Чтение документов")).toHaveAttribute("data-done", "true");
+    expect(first!.queryByText("Чтение документов")).not.toBeInTheDocument();
     tick(2_300);
     stage(first, "Сопоставление с КФЗ");
     tick(1_500);
@@ -77,15 +77,16 @@ describe("Single-screen new check", () => {
     tick(1_400);
     stage(first, "Готово"); stage(second, "Чтение документов");
     expect(first!.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
-    expect(first!.getByText("Обработано 23 из 23 файлов")).toBeInTheDocument();
-    const firstLink = first!.getByRole("link", { name: "Открыть результат" }).getAttribute("href");
+    expect(first!.queryByText(/^Обработано/)).not.toBeInTheDocument();
+    expect(first!.queryByText("Демонстрация", { exact: true })).not.toBeInTheDocument();
+    const firstLink = first!.getByRole("link", { name: "КФЗ №3/7" }).getAttribute("href");
     expect(firstLink).toMatch(/^\/checks\/g\?run=demo-/);
     expect(second!.queryByRole("link")).not.toBeInTheDocument();
     expectExampleUnchanged();
     cleanup();
     tick(7_500);
     render(<ChecksProvider><DemoHistory /></ChecksProvider>);
-    const links = screen.getAllByRole("link", { name: "Открыть результат" }).map((link) => link.getAttribute("href"));
+    const links = screen.getAllByRole("link", { name: "КФЗ №3/7" }).map((link) => link.getAttribute("href"));
     expect(links).toHaveLength(2);
     expect(new Set(links).size).toBe(2);
     expect(links).toContain(firstLink);
@@ -111,8 +112,9 @@ describe("Single-screen new check", () => {
     cleanup();
     act(() => vi.advanceTimersByTime(1_000));
     render(<ChecksProvider><DemoHistory /></ChecksProvider>);
-    expect(screen.getAllByText("Требуется серверная сверка")).toHaveLength(2);
-    expect(screen.queryByRole("link", { name: "Открыть результат" })).not.toBeInTheDocument();
+    expect(screen.getByText("В очереди пока нет проверок.")).toBeInTheDocument();
+    expect(screen.queryByText("Требуется серверная сверка", { exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "КФЗ №3/7" })).not.toBeInTheDocument();
     expect(screen.queryByText("Обработано 2 из 2 файлов")).not.toBeInTheDocument();
   });
 
@@ -127,7 +129,7 @@ describe("Single-screen new check", () => {
     act(() => vi.advanceTimersByTime(1_000));
     expect(screen.getByText("Ошибка добавления")).toBeInTheDocument();
     expect(screen.getByText(/пустой файл/)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Открыть результат" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "КФЗ №3/7" })).not.toBeInTheDocument();
   });
   it.each(["КФЗ.pdf", "Акт.pdf"])("disables launch again when %s is removed", (name) => {
     setup(); upload("report", "КФЗ.pdf"); upload("docs", "Акт.pdf");
@@ -154,9 +156,12 @@ describe("Single-screen new check", () => {
     expect(screen.getByRole("button", { name: "Убрать КФЗ.pdf" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Убрать Второй.pdf" })).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Поддерживаются: PDF");
-    upload("docs", "Первый.docx", "Плохой.txt"); upload("docs", "Второй.xlsx");
+    upload("docs", "Первый.docx", "Плохой.txt", "Комплект.ZIP"); upload("docs", "Второй.xlsx");
     expect(screen.getByRole("button", { name: "Убрать Первый.docx" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Убрать Второй.xlsx" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Убрать Комплект.ZIP" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Выбрать первичные документы").getAttribute("accept")?.split(","))
+      .toEqual(expect.arrayContaining([".zip", ".rar", ".7z"]));
     expect(screen.queryByRole("button", { name: "Убрать Плохой.txt" })).not.toBeInTheDocument();
     upload("report", "Заменённый.pdf");
     expect(screen.queryByRole("button", { name: "Убрать КФЗ.pdf" })).not.toBeInTheDocument();

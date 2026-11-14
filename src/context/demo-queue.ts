@@ -57,33 +57,31 @@ function statusAt(job: DemoJob, now: number) {
     return {
       status: job.kind === "sample" ? upload.label : "Добавление файлов",
       progress: Math.floor(Math.max(0, elapsed) / UPLOAD_MS * upload.end),
-      processed: 0, stage: 0, complete: false, failed: false,
+      complete: false, failed: false,
     };
   }
   if (job.kind !== "sample") {
     return {
       status: job.emptyFile ? "Ошибка добавления" : "Требуется серверная сверка",
-      progress: null, processed: 0, stage: -1, complete: true, failed: !!job.emptyFile,
+      progress: null, complete: true, failed: !!job.emptyFile,
     };
   }
   if (now < job.startsAt) {
-    return { status: waiting.label, progress: waiting.start, processed: 0, stage: 1, complete: false, failed: false };
+    return { status: waiting.label, progress: waiting.start, complete: false, failed: false };
   }
   let remaining = now - job.startsAt;
-  for (const [index, step] of processing.entries()) {
+  for (const step of processing) {
     if (remaining < step.duration) {
       const fraction = remaining / step.duration;
       const progress = Math.floor(step.start + (step.end - step.start) * fraction);
-      const processed = index < 2 ? Math.floor(job.documents * (index + fraction) / 2) : job.documents;
-      return { status: step.label, progress, processed, stage: index + 2, complete: false, failed: false };
+      return { status: step.label, progress, complete: false, failed: false };
     }
     remaining -= step.duration;
   }
-  return { status: "Готово", progress: 100, processed: job.documents, stage: stages.length, complete: true, failed: false };
+  return { status: "Готово", progress: 100, complete: true, failed: false };
 }
 
 export type DemoJobEntry = DemoJob & ReturnType<typeof statusAt>;
-export const DEMO_STAGES = stages.map(({ label }) => label);
 
 function makeId() {
   const random = globalThis.crypto.randomUUID?.() ??

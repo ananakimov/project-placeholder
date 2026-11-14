@@ -3,6 +3,9 @@ import { FileTypeIcon } from "./FileTypeIcon";
 
 export type UploadFile = { name: string; size: number };
 export const fileExtension = (name: string) => name.split(".").pop()?.toUpperCase() ?? "";
+export const primaryFileTypes = ["PDF", "DOCX", "XLS", "XLSX", "PNG", "ZIP", "RAR", "7Z"];
+export const primaryFileAccept = primaryFileTypes.map((extension) => `.${extension.toLowerCase()}`).join(",");
+
 
 function sizeLabel(bytes: number) {
   return bytes >= 1048576

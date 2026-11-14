@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { ArrowRight, FileUp, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { UploadFileList, fileExtension, type UploadFile } from "@/components/UploadFiles";
+import { UploadFileList, fileExtension, primaryFileTypes, primaryFileAccept, type UploadFile } from "@/components/UploadFiles";
 import { useChecks } from "@/context/ChecksContext";
 import { DemoHistory } from "@/components/check/DemoHistory";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,7 @@ export function NewCheck() {
   const takeFiles = (incoming: FileList | null, group: FileGroup) => {
     if (!incoming) return;
     const all = Array.from(incoming);
-    const allowed = group === "report" ? ["PDF"] : ["PDF", "DOCX", "XLSX", "XLS", "PNG"];
+    const allowed = group === "report" ? ["PDF"] : primaryFileTypes;
     const accepted = all.filter((file) => allowed.includes(fileExtension(file.name))).map(({ name, size }) => ({ name, size }));
     setErrors((previous) => ({ ...previous, [group]: accepted.length < all.length ? `Поддерживаются: ${allowed.join(", ")}. Остальные файлы не добавлены.` : "" }));
     if (group === "report") setReport((previous) => accepted.length ? accepted.slice(0, 1) : previous);
@@ -64,10 +64,10 @@ function UploadBlock({ group, files, error, onFiles, onRemove }: {
       onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setOver(false); }}
       onDrop={(event) => { event.preventDefault(); setOver(false); onFiles(event.dataTransfer.files, group); }}>
       <header className="upload-card-header !mb-4">
-        <div><h2>{report ? "КФЗ" : "Первичные документы"}</h2><p>{report ? "Один файл PDF" : "PDF, DOCX, XLS, XLSX, PNG"}</p></div>
+        <div><h2>{report ? "КФЗ" : "Первичные документы"}</h2><p>{report ? "Один файл PDF" : primaryFileTypes.join(", ")}</p></div>
       </header>
       <input ref={input} type="file" hidden aria-label={report ? "Выбрать отчёт" : "Выбрать первичные документы"} multiple={!report}
-        accept={report ? ".pdf" : ".pdf,.docx,.xls,.xlsx,.png"}
+        accept={report ? ".pdf" : primaryFileAccept}
         onChange={(event) => { onFiles(event.target.files, group); event.target.value = ""; }} />
       {!files.length ? <div className="upload-empty !min-h-0 !py-5">
         <FileUp size={28} strokeWidth={1.5} />

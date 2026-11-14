@@ -1,35 +1,31 @@
-import type { ReactNode } from "react";
+import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CheckHeader } from "@/components/check/CheckHeader";
-import { CheckConclusion } from "@/pages/CheckConclusion";
-import { ChecksProvider } from "@/context/ChecksContext";
+import { ExportDialog } from "@/components/check/ExportDialog";
 import { checks } from "@/data/mock";
 import { checkToJson, downloadBlob } from "@/lib/export";
 
 const navigate = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => navigate,
-  Link: ({ to, children }: { to: string; children: ReactNode }) => <a href={to}>{children}</a>,
 }));
 vi.mock("@/lib/export", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/lib/export")>(), downloadBlob: vi.fn(),
 }));
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 const check = checks.find((item) => item.id === "g")!;
+function ExportHarness() {
+  const [open, setOpen] = useState(true);
+  return <ExportDialog check={check} open={open} onOpenChange={setOpen} />;
+}
 function setup() {
-  render(<ChecksProvider><CheckHeader check={check} /><CheckConclusion check={check} /></ChecksProvider>);
-  fireEvent.click(screen.getByRole("button", { name: "Скачать результат" }));
+  render(<ExportHarness />);
   return screen.getByRole("dialog");
 }
 
 describe("Result export", () => {
-  it("offers one download action in the conclusion and only PDF / JSON formats", () => {
-    render(<ChecksProvider><CheckHeader check={check} /><CheckConclusion check={check} /></ChecksProvider>);
-    expect(screen.queryByRole("button", { name: "Экспорт" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Скачать результат" })).toHaveLength(1);
-    fireEvent.click(within(screen.getByRole("region", { name: "Заключение по проверке" })).getByRole("button", { name: "Скачать результат" }));
-    const dialog = screen.getByRole("dialog");
+  it("retains only PDF / JSON formats in the standalone export dialog", () => {
+    const dialog = setup();
     expect(within(dialog).getByRole("button", { name: /Заключение \(PDF\)/ })).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: /Результат \(JSON\)/ })).toBeInTheDocument();
     expect(within(dialog).queryByText(/CSV/)).not.toBeInTheDocument();

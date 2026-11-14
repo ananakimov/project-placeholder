@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FileSearch } from "lucide-react";
+import { checkLocation } from "@/lib/check-location";
 import { Link } from "@tanstack/react-router";
 import { FileTypeIcon } from "@/components/FileTypeIcon";
 import { StatusLabel } from "@/components/StatusChip";
@@ -131,8 +132,7 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
                           {i > 0 && ", "}
                           <Link
                             to="/checks/$id"
-                            params={{ id: check.id }}
-                            search={version === undefined ? {} : { version }}
+                            {...checkLocation(check.id, version)}
                             onClick={(e) => e.stopPropagation()}
                             className="text-primary hover:underline"
                           >

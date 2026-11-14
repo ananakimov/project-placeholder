@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DemoHistory } from "@/components/check/DemoHistory";
 import { NewCheck } from "@/pages/NewCheck";
@@ -8,8 +9,10 @@ import { ChecksProvider, useChecks } from "@/context/ChecksContext";
 import { checks } from "@/data/mock";
 import { SAMPLE_FILES, SAMPLE_REPORT, SAMPLE_DOCS } from "@/data/sample-files";
 
-const navigate = vi.hoisted(() => vi.fn());
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => navigate }));
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ params, search, children }: { params: { id: string }; search: Record<string, string>; children: ReactNode }) =>
+    <a href={`/checks/${params.id}?${new URLSearchParams(search)}`}>{children}</a>,
+}));
 function CheckProbe() {
   return <output data-testid="check">{JSON.stringify(useChecks().getCheck("g"))}</output>;
 }
@@ -30,7 +33,6 @@ afterEach(() => {
   vi.restoreAllMocks();
   localStorage.clear();
   vi.useRealTimers();
-  navigate.mockReset();
 });
 
 describe("Single-screen new check", () => {
@@ -50,14 +52,46 @@ describe("Single-screen new check", () => {
     setup(); upload("report", "КФЗ.pdf");
     expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
   });
-  it("opens the fixed example without staging files or adding a job", () => {
+  it("advances each sample through every stage and restores completed links after remount", () => {
+    vi.useFakeTimers();
     setup();
-    fireEvent.click(screen.getByRole("button", { name: "Загрузить пример" }));
-    expect(navigate).toHaveBeenCalledExactlyOnceWith({ to: "/checks/$id", params: { id: "g" } });
-    expect(screen.getByText("Демо-заданий пока нет.")).toBeInTheDocument();
+    for (let i = 0; i < 2; i++) fireEvent.click(screen.getByRole("button", { name: "Загрузить пример" }));
+    const recent = screen.getByRole("region", { name: "Очередь проверок" });
+    const [second, first] = within(recent).getAllByRole("heading", { name: "КФЗ №3/7" })
+      .map((heading) => within(heading.closest("li")!));
+    const stage = (job: typeof first, name: string) => expect(job!.getByRole("status")).toHaveTextContent(name);
+    const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+    stage(first, "Загрузка файлов"); stage(second, "Загрузка файлов");
+    tick(1_000);
+    stage(first, "В очереди"); stage(second, "В очереди");
+    tick(1_100);
+    stage(first, "Чтение документов"); stage(second, "В очереди");
+    expect(Number(first!.getByRole("progressbar").getAttribute("aria-valuenow"))).toBeGreaterThan(12);
+    tick(1_500);
+    stage(first, "Извлечение данных");
+    expect(first!.getByText("Чтение документов")).toHaveAttribute("data-done", "true");
+    tick(2_300);
+    stage(first, "Сопоставление с КФЗ");
+    tick(1_500);
+    stage(first, "Подготовка заключения");
+    tick(1_400);
+    stage(first, "Готово"); stage(second, "Чтение документов");
+    expect(first!.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    expect(first!.getByText("Обработано 23 из 23 файлов")).toBeInTheDocument();
+    const firstLink = first!.getByRole("link", { name: "Открыть результат" }).getAttribute("href");
+    expect(firstLink).toMatch(/^\/checks\/g\?run=demo-/);
+    expect(second!.queryByRole("link")).not.toBeInTheDocument();
     expectExampleUnchanged();
+    cleanup();
+    tick(7_500);
+    render(<ChecksProvider><DemoHistory /></ChecksProvider>);
+    const links = screen.getAllByRole("link", { name: "Открыть результат" }).map((link) => link.getAttribute("href"));
+    expect(links).toHaveLength(2);
+    expect(new Set(links).size).toBe(2);
+    expect(links).toContain(firstLink);
   });
-  it("queues two independent sets, keeps only metadata and restores history after remount", () => {
+
+  it("keeps only safe metadata for manual uploads and never offers synthetic financial results for them", () => {
     vi.useFakeTimers();
     setup();
     for (const number of [1, 2]) {
@@ -68,18 +102,31 @@ describe("Single-screen new check", () => {
       expect(submit).toBeDisabled();
       expect(screen.queryByText(`Акт ${number}.pdf`)).not.toBeInTheDocument();
     }
-    expect(navigate).not.toHaveBeenCalled();
-    const recent = screen.getByRole("region", { name: "Последние демо-задания" });
-    expect(within(recent).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(recent).getByText("В очереди")).toBeInTheDocument();
-    expect(within(recent).getByText("Имитация обработки")).toBeInTheDocument();
+    const recent = within(screen.getByRole("region", { name: "Очередь проверок" }));
+    expect(recent.getAllByRole("progressbar")).toHaveLength(2);
+    expect(recent.getAllByText("Файлов: 2")).toHaveLength(2);
     expect(localStorage.getItem("doccheck.demo-queue.v1")).not.toMatch(/Приватное|Акт/);
     expectExampleUnchanged();
     cleanup();
-    act(() => vi.advanceTimersByTime(5100));
+    act(() => vi.advanceTimersByTime(1_000));
     render(<ChecksProvider><DemoHistory /></ChecksProvider>);
-    expect(screen.getByText("Демо завершено")).toBeInTheDocument();
-    expect(screen.getByText("Имитация обработки")).toBeInTheDocument();
+    expect(screen.getAllByText("Требуется серверная сверка")).toHaveLength(2);
+    expect(screen.queryByRole("link", { name: "Открыть результат" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Обработано 2 из 2 файлов")).not.toBeInTheDocument();
+  });
+
+  it("reports truly empty files as an item error separate from an unsupported OCR result", () => {
+    vi.useFakeTimers();
+    setup();
+    upload("report", "КФЗ.pdf");
+    fireEvent.change(screen.getByLabelText("Выбрать первичные документы"), {
+      target: { files: [new File([], "Акт.pdf")] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Запустить проверку" }));
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(screen.getByText("Ошибка добавления")).toBeInTheDocument();
+    expect(screen.getByText(/пустой файл/)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Открыть результат" })).not.toBeInTheDocument();
   });
   it.each(["КФЗ.pdf", "Акт.pdf"])("disables launch again when %s is removed", (name) => {
     setup(); upload("report", "КФЗ.pdf"); upload("docs", "Акт.pdf");
@@ -87,21 +134,19 @@ describe("Single-screen new check", () => {
     fireEvent.click(screen.getByRole("button", { name: `Убрать ${name}` }));
     expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
   });
-  it("keeps sequential demo jobs in memory when the storage quota is exceeded", () => {
+  it("keeps queued jobs in memory when the storage quota is exceeded", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new DOMException("Storage quota exceeded", "QuotaExceededError");
     });
     vi.useFakeTimers();
     setup();
-    for (const number of [1, 2]) {
-      upload("report", `КФЗ ${number}.pdf`);
-      upload("docs", `Акт ${number}.pdf`);
-      fireEvent.click(screen.getByRole("button", { name: "Запустить проверку" }));
-    }
-    const recent = within(screen.getByRole("region", { name: "Последние демо-задания" }));
-    expect(recent.getAllByRole("listitem")).toHaveLength(2);
-    expect(recent.getByText("В очереди")).toBeInTheDocument();
-    expect(recent.getByText("Имитация обработки")).toBeInTheDocument();
+    for (let i = 0; i < 2; i++) fireEvent.click(screen.getByRole("button", { name: "Загрузить пример" }));
+    act(() => vi.advanceTimersByTime(1_900));
+    const recent = within(screen.getByRole("region", { name: "Очередь проверок" }));
+    expect(recent.getAllByRole("progressbar")).toHaveLength(2);
+    const states = recent.getAllByRole("status").map((status) => status.textContent);
+    expect(states).toEqual(expect.arrayContaining(["В очереди", "Чтение документов"]));
+    expect(recent.getByText(/Сохранить её в браузере не удалось/)).toBeInTheDocument();
   });
   it("retains format filtering, one report and append behavior for primary documents", () => {
     setup(); upload("report", "КФЗ.pdf", "Второй.pdf", "Неподходящий.xlsx");

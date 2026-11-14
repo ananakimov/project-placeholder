@@ -105,6 +105,7 @@ describe("Single-screen new check", () => {
     const recent = within(screen.getByRole("region", { name: "Очередь проверок" }));
     expect(recent.getAllByRole("progressbar")).toHaveLength(2);
     expect(recent.getAllByText("Файлов: 2")).toHaveLength(2);
+    expect(recent.getAllByText("Добавление файлов")).toHaveLength(2);
     expect(localStorage.getItem("doccheck.demo-queue.v1")).not.toMatch(/Приватное|Акт/);
     expectExampleUnchanged();
     cleanup();

@@ -39,7 +39,7 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
   const refs = (d: Doc) =>
     check.rows
       .filter((r) => r.sources.some((s) => s.docId === d.id))
-      .map((r) => `${PREFIX[check.id]}${check.rows.indexOf(r) + 1}`);
+      .map((r) => `${PREFIX[checkLocation(check.id).params.id]}${check.rows.indexOf(r) + 1}`);
   const list = check.docs.filter((d) =>
     filter === "all" || (filter === "read" ? d.state === "прочитан" : d.state !== "прочитан"),
   );

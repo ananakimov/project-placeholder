@@ -55,7 +55,8 @@ function statusAt(job: DemoJob, now: number) {
   const elapsed = now - job.createdAt;
   if (elapsed < UPLOAD_MS) {
     return {
-      status: upload.label, progress: Math.floor(Math.max(0, elapsed) / UPLOAD_MS * upload.end),
+      status: job.kind === "sample" ? upload.label : "Добавление файлов",
+      progress: Math.floor(Math.max(0, elapsed) / UPLOAD_MS * upload.end),
       processed: 0, stage: 0, complete: false, failed: false,
     };
   }
@@ -132,10 +133,14 @@ export function useDemoQueue() {
     const result = fixture ? {
       ...fixture, id, createdAt, date: new Intl.DateTimeFormat("ru-RU", { timeZone: "UTC" }).format(createdAt),
     } : undefined;
-    const next = [{
+    const submitted: DemoJob = {
       id, createdAt, startsAt, documents: fixture?.docs.length ?? documents, kind,
       ...(result && { result }), ...(emptyFile && { emptyFile }),
-    }, ...previous];
+    };
+    let retainedManual = 0;
+    const next = [submitted, ...previous].filter((job) =>
+      job.kind === "sample" || retainedManual++ < 50,
+    );
     if (!inMemory.current) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

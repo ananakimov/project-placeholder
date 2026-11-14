@@ -28,8 +28,7 @@ describe("Demo acceptance and archive", () => {
     expect(screen.queryByText(/завершении работы, без электронной подписи/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Недостоверен" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "КФЗ №3/7" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Приняты 1" }));
-    expect(screen.getByRole("link", { name: "КФЗ №3/7" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Приняты/ })).not.toBeInTheDocument();
     expect(check).toEqual(original);
     cleanup();
     render(<ChecksProvider><Checks archive /></ChecksProvider>);

@@ -5,14 +5,13 @@ import {
   ChevronRight,
   Check,
   Crosshair,
-  Highlighter,
   FileQuestion,
   Info,
   Minus,
   Plus,
   RotateCcw,
 } from "lucide-react";
-import type { Bbox, Doc, Row, SourceRef } from "@/data/mock";
+import type { Bbox, Doc, SourceRef } from "@/data/mock";
 import { formatMoney } from "@/components/money-format";
 import {
   annotationKind,
@@ -27,14 +26,15 @@ const pct = (b: Bbox) => ({
   height: `${b[3] * 100}%`,
 });
 export function SourceViewer({
-  row,
+  request = 0,
   source,
   doc,
 }: {
-  row?: Row | undefined;
+  request?: number;
   source: SourceRef | null;
   doc: Doc | null;
 }) {
+  const views = useRef(new Map<string, DocumentView>());
   if (doc?.demoUpload)
     return <div className="source-empty-state">
       <FileQuestion size={34} />
@@ -50,14 +50,28 @@ export function SourceViewer({
     );
   if (doc.type === "КФЗ" && !doc.previewPages?.length)
     return <p className="source-empty-state">Оригинал КФЗ недоступен.</p>;
-  return <Viewer key={`${row?.id ?? "document"}:${doc.id}`} source={source} doc={doc} />;
+  return <Viewer key={doc.id} source={source} doc={doc} request={request} views={views.current} />;
 }
-function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
-  const [page, setPage] = useState(source?.page ?? 1);
-  const [zoom, setZoom] = useState(100);
-  const [highlight, setHighlight] = useState(true);
+
+type DocumentView = {
+  source: SourceRef | null;
+  request: number;
+  page: number;
+  zoom: number;
+  enabledKinds: Set<AnnotationKind>;
+};
+
+function Viewer({ source, doc, request, views }: {
+  source: SourceRef | null;
+  doc: Doc;
+  request: number;
+  views: Map<string, DocumentView>;
+}) {
+  const saved = views.get(doc.id);
+  const [page, setPage] = useState(saved?.page ?? source?.page ?? 1);
+  const [zoom, setZoom] = useState(saved?.zoom ?? 100);
   const [enabledKinds, setEnabledKinds] = useState(
-    () => new Set<AnnotationKind>(annotationTypes.map((type) => type.kind)),
+    () => saved?.enabledKinds ?? new Set<AnnotationKind>(annotationTypes.map((type) => type.kind)),
   );
   const [locate, setLocate] = useState(0);
   const [loadedImage, setLoadedImage] = useState<string | null>(null);
@@ -77,16 +91,18 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
       ? "money"
       : "number";
   const showMark =
-    readable && pageReady && source !== null && page === source.page && highlight && enabledKinds.has(sourceKind);
+    readable && pageReady && source !== null && page === source.page && enabledKinds.has(sourceKind);
   useEffect(() => {
-    if (!source) return;
-    setPage(source.page);
-    setHighlight(true);
-    setEnabledKinds((previous) =>
-      previous.has(sourceKind) ? previous : new Set([...previous, sourceKind]),
-    );
-    setLocate((n) => n + 1);
-  }, [source, sourceKind]);
+    const previous = views.get(doc.id);
+    if (source && (previous?.source !== source || previous.request !== request)) {
+      setPage(source.page);
+      setEnabledKinds((kinds) => kinds.has(sourceKind) ? kinds : new Set([...kinds, sourceKind]));
+      setLocate((n) => n + 1);
+    }
+  }, [source, sourceKind, request, doc.id, views]);
+  useEffect(() => {
+    views.set(doc.id, { source, request, page, zoom, enabledKinds });
+  }, [doc.id, enabledKinds, page, request, source, views, zoom]);
   useEffect(() => {
     const box = viewport.current;
     const el = mark.current;
@@ -111,7 +127,6 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
   const locateSource = () => {
     if (!source) return;
     setPage(source.page);
-    setHighlight(true);
     setEnabledKinds((previous) => new Set([...previous, sourceKind]));
     setLocate((n) => n + 1);
   };
@@ -120,49 +135,7 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
   const amountY = amount?.bbox[1] ?? 0.76;
   return (
     <div className="document-viewer">
-      {doc.state !== "прочитан" && (
-        <div className="document-warning">
-          {readable ? <Info size={15} /> : <AlertOctagon size={15} />}
-          <span>
-            {doc.state === "не прочитан"
-              ? pageImage ? "Показан оригинал. Данные файла не распознаны." : "Файл не распознан. Подсветка недоступна."
-              : doc.state === "дубль"
-                ? "Дубликат: не учитывается повторно."
-                : doc.state === "вне периода"
-                  ? "Дата вне периода проверки: документ исключён."
-                  : "Документ относится к другому договору."}
-          </span>
-        </div>
-      )}
       <div className="document-controls">
-        <fieldset className="annotation-legend" disabled={!readable}>
-          <legend>Извлечённые данные</legend>
-          <div>
-            {annotationTypes.map(({ kind, label }) => (
-              <label key={kind} data-kind={kind}>
-                <input
-                  type="checkbox"
-                  aria-label={`Подсветка: ${label}`}
-                  checked={highlight && enabledKinds.has(kind)}
-                  onChange={(event) => {
-                    const checked = event.target.checked;
-                    setHighlight(true);
-                    setEnabledKinds((previous) => {
-                      const next = highlight ? new Set(previous) : new Set<AnnotationKind>();
-                      if (checked) next.add(kind);
-                      else next.delete(kind);
-                      return next;
-                    });
-                  }}
-                />
-                <span className="annotation-checkbox">
-                  <Check size={12} strokeWidth={2.5} />
-                </span>
-                {label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
         <div className="document-toolbar">
           <div className="page-controls">
             <button
@@ -208,17 +181,49 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
               <RotateCcw size={13} />
             </button>
           </div>
-          <button
-            aria-label={highlight ? "Скрыть подсветку" : "Показать подсветку"}
-            title={highlight ? "Скрыть подсветку" : "Показать подсветку"}
-            aria-pressed={highlight}
-            disabled={!readable}
-            onClick={() => setHighlight((h) => !h)}
-          >
-            <Highlighter size={15} aria-hidden />
-          </button>
         </div>
+        <fieldset className="annotation-legend" disabled={!readable}>
+          <legend>Извлечённые данные</legend>
+          <div>
+            {annotationTypes.map(({ kind, label }) => (
+              <label key={kind} data-kind={kind}>
+                <input
+                  type="checkbox"
+                  aria-label={`Подсветка: ${label}`}
+                  checked={enabledKinds.has(kind)}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setEnabledKinds((previous) => {
+                      const next = new Set(previous);
+                      if (checked) next.add(kind);
+                      else next.delete(kind);
+                      return next;
+                    });
+                  }}
+                />
+                <span className="annotation-checkbox">
+                  <Check size={12} strokeWidth={2.5} />
+                </span>
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </div>
+      {doc.state !== "прочитан" && (
+        <div className="document-warning">
+          {readable ? <Info size={15} /> : <AlertOctagon size={15} />}
+          <span>
+            {doc.state === "не прочитан"
+              ? pageImage ? "Показан оригинал. Данные файла не распознаны." : "Файл не распознан. Подсветка недоступна."
+              : doc.state === "дубль"
+                ? "Дубликат — не учитывается повторно"
+                : doc.state === "вне периода"
+                  ? "Вне периода проверки — исключён из расчёта"
+                  : "Другой договор — исключён из расчёта"}
+          </span>
+        </div>
+      )}
       <div
         className="document-viewport"
         ref={viewport}
@@ -330,7 +335,6 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
                 </>
               )}
               {readable && pageReady &&
-                highlight &&
                 fields
                   .filter((field) => enabledKinds.has(annotationKind(field.label)))
                   .map((field) => {

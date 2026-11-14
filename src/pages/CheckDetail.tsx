@@ -196,7 +196,6 @@ function Reconciliation({ check, version }: ResultProps) {
           </table>
         </div>
         {!rows.length && <div className="reconcile-empty"><Search size={25} /><strong>Показатели не найдены</strong><p>Измените запрос или выберите другой статус.</p><button onClick={() => { setQuery(""); setFilter("all"); }}>Сбросить фильтры</button></div>}
-        <div className="reconcile-left-footer"><span>Показателей: {rows.filter(statusFilter).length} из {total}</span></div>
       </section>
       </div>
       <AdditionalChecks check={check} version={version} onExcluded={openExcluded} onDiagnostic={openDiagnostic} onIndicator={(id) => {

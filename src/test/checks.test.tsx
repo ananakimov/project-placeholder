@@ -86,16 +86,14 @@ describe("Checks list", () => {
     expect(link).toHaveAttribute("href", "/checks/g");
   });
 
-  it("shows the newest demo assignments above results and omits them from financial filters", () => {
+  it("omits manual jobs without a financial result from the checks list", () => {
     localStorage.setItem("doccheck.demo-queue.v1", JSON.stringify([
       { id: "older", createdAt: 1_800_000_000_000, startsAt: 1_800_000_000_000, documents: 1 },
       { id: "newer", createdAt: 1_800_000_000_001, startsAt: 1_800_000_005_000, documents: 2 },
     ]));
     setup();
-    expect(screen.getByRole("button", { name: "Все 6" })).toBeInTheDocument();
-    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Проверка КФЗ · newer");
-    expect(screen.getAllByRole("row")[2]).toHaveTextContent("Проверка КФЗ · older");
-    fireEvent.click(screen.getByRole("button", { name: "Есть расхождения 2" }));
-    expect(screen.queryByText("Проверка КФЗ · newer")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Все 4" })).toBeInTheDocument();
+    expect(screen.queryByText(/^Проверка КФЗ ·/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /^Ваши проверки/ })).not.toBeInTheDocument();
   });
 });

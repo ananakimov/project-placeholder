@@ -46,11 +46,11 @@ describe("Reconciliation workspace", () => {
     const documents = panel.getByRole("combobox", { name: "Документы комплекта" });
     expect(within(documents).getAllByRole("option")).toHaveLength(g.docs.length);
     expect(documents).toHaveValue(report.id);
-    expect(panel.getByRole("heading", { name: report.title })).toBeInTheDocument();
+    expect(panel.queryByRole("heading")).not.toBeInTheDocument();
     expect(panel.getByRole("img", { name: `${report.fileName}, страница 1` })).toHaveAttribute("src", report.previewPages![0]!.src);
     const excluded = g.docs.find((doc) => doc.state === "дубль")!;
     fireEvent.change(documents, { target: { value: excluded.id } });
-    expect(panel.getByRole("heading", { name: excluded.title })).toBeInTheDocument();
+    expect(panel.getByText("Дубликат — не учитывается повторно")).toBeInTheDocument();
     expect(panel.getByRole("img")).toHaveAttribute("src", excluded.previewPages![0]!.src);
   });
   it("clearly reports a missing original KФЗ while leaving primary documents accessible", () => {
@@ -125,9 +125,10 @@ describe("Reconciliation workspace", () => {
     expect(within(details).getByText("№ ВЗ-08 · 31.08.2026 · Стр. 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Сумма документов: Оплата труда")).toHaveTextContent("380\u202f000,00 + 380\u202f000,00 + 375\u202f000,00 + 380\u202f000,00 = 1\u202f515\u202f000,00 ₽", { normalizeWhitespace: false });
     openDocument(b, "b-1");
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Ведомость ЗП, август 2026, источник 3" }), { key: "Enter" });
+    const august = b.docs.find((doc) => doc.number === "ВЗ-08")!;
+    fireEvent.change(screen.getByRole("combobox", { name: "Документы комплекта" }), { target: { value: august.id } });
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 375\s000,00/)).toBeInTheDocument();
-    expect(screen.getByText("3 / 4")).toBeInTheDocument();
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
   });
   it("does not sum ambiguous document candidates as if they were accepted addends", () => {
     const c = checks.find((check) => check.id === "c")!;
@@ -173,6 +174,22 @@ describe("Reconciliation workspace", () => {
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
   });
+  it("remembers the page per document and goes back to the exact page on explicit evidence selection", () => {
+    desk();
+    openDocument(b, "b-8");
+    expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Предыдущая страница" }));
+    fireEvent.click(screen.getByRole("button", { name: "Увеличить масштаб" }));
+    const picker = screen.getByRole("combobox", { name: "Документы комплекта" });
+    const original = (picker as HTMLSelectElement).value;
+    fireEvent.change(picker, { target: { value: b.docs.find((doc) => doc.id !== original)!.id } });
+    fireEvent.change(picker, { target: { value: original } });
+    expect(screen.getByText("Стр. 1 / 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
+    fireEvent.click(screen.getByRole("button", { name: /Открыть документ:.*АО-44/ }));
+    expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Подсвеченный фрагмент/)).toBeInTheDocument();
+  });
   it("does not show one indicator's evidence next to another active discrepancy", () => {
     desk();
     openDocument(b, "b-1");
@@ -184,12 +201,13 @@ describe("Reconciliation workspace", () => {
   });
   it("keeps metadata and highlights synchronized across documents", () => {
     desk(); openDocument(b, "b-1");
-    fireEvent.keyDown(screen.getByRole("tab", { name: "Ведомость ЗП, август 2026, источник 3" }), { key: "Enter" });
-    expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent("ВЗ-08 · 31.08.2026 · СИН-2026/12");
+    const august = b.docs.find((doc) => doc.number === "ВЗ-08")!;
+    fireEvent.change(screen.getByRole("combobox", { name: "Документы комплекта" }), { target: { value: august.id } });
+    expect(screen.getByRole("combobox", { name: "Документы комплекта" })).toHaveValue(august.id);
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 375\s000,00/)).toBeInTheDocument();
     closeDocument(); openDocument(b, "b-4");
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 280\s000,00/)).toBeInTheDocument();
-    expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent("СП-27 · 28.08.2026 · СИН-2026/12");
+    expect(screen.getByRole("combobox", { name: "Документы комплекта" })).toHaveValue(b.rows.find((row) => row.id === "b-4")!.sources[0]!.docId);
   });
   it("sums source money exactly, including negative amounts and large values", () => {
     expect(sumMoney(["0.10", "0.20", "-0.30"])).toBe("0.00");
@@ -203,28 +221,28 @@ describe("Document location controls", () => {
     const row = a.rows[0]!;
     const source = row.sources[0]!;
     const doc = a.docs.find((d) => d.id === source.docId)!;
-    render(<SourceViewer row={row} source={source} doc={doc} />);
+    render(<SourceViewer source={source} doc={doc} />);
     fireEvent.click(screen.getByRole("checkbox", { name: "Подсветка: Суммы" }));
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/Распознанное поле: Дата:/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
     expect(screen.getByRole("checkbox", { name: "Подсветка: Суммы" })).toBeChecked();
     expect(screen.getByLabelText(/Подсвеченный фрагмент/)).toHaveAttribute("data-kind", "money");
-    fireEvent.click(screen.getByRole("button", { name: "Скрыть подсветку" }));
-    expect(screen.queryByLabelText(/Распознанное поле:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Подсветка: Суммы" }));
+    expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
   });
   it("returns to the exact source page and re-enables its highlight", () => {
     const row = a.rows.find((r) => r.id === "a-7")!;
     const source = row.sources[0]!;
     const doc = a.docs.find((d) => d.id === source.docId)!;
-    render(<SourceViewer row={row} source={source} doc={doc} />);
+    render(<SourceViewer source={source} doc={doc} />);
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Предыдущая страница" }));
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
     expect(screen.getByLabelText(/Подсвеченный фрагмент/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Скрыть подсветку" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Подсветка: Суммы" }));
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
     expect(screen.getByLabelText(/Подсвеченный фрагмент/)).toBeInTheDocument();
@@ -233,7 +251,7 @@ describe("Document location controls", () => {
     const row = a.rows[0]!;
     const source = row.sources[0]!;
     const doc = a.docs.find((d) => d.id === source.docId)!;
-    render(<SourceViewer row={row} source={source} doc={doc} />);
+    render(<SourceViewer source={source} doc={doc} />);
     for (let i = 0; i < 3; i++)
       fireEvent.click(screen.getByRole("button", { name: "Увеличить масштаб" }));
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("175%");

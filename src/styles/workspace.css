@@ -3162,6 +3162,17 @@ kbd {
 .source-sheet {
   height: 100dvh;
 }
+.source-sheet[data-fullscreen="true"] {
+  width: 100%;
+  max-width: none;
+  border-left: 0;
+}
+.source-sheet-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
 .source-sheet-header {
   display: flex;
   align-items: center;

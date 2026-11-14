@@ -164,6 +164,53 @@ describe("Original example document pages", () => {
     expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toBeInTheDocument();
   });
 
+  it("keeps the loaded document, zoom and annotations through fullscreen and still navigates sources", () => {
+    render(<ChecksProvider><CheckDetail check={g} /></ChecksProvider>);
+    fireEvent.click(screen.getByRole("button", { name: production.name }));
+    const details = screen.getByRole("region", { name: `Подробности: ${production.name}` });
+    fireEvent.click(within(details).getByRole("button", { name: `Открыть документ: ${first.title}` }));
+    fireEvent.click(screen.getByRole("button", { name: "Следующий документ" }));
+    const secondSource = production.sources[1]!;
+    const second = g.docs.find((doc) => doc.id === secondSource.docId)!;
+    const image = screen.getByRole("img");
+    fireEvent.load(image);
+    fireEvent.click(screen.getByRole("button", { name: "Увеличить масштаб" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Подсветка: Даты" }));
+    const mark = screen.getByLabelText(/Подсвеченный фрагмент:/);
+    expect(mark).toHaveAttribute("aria-label", `Подсвеченный фрагмент: ${secondSource.text}`);
+
+    fireEvent.click(screen.getByRole("button", { name: "Развернуть источник на весь экран" }));
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-fullscreen", "true");
+    expect(screen.getByRole("button", { name: "Свернуть источник в боковую панель" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("img")).toBe(image);
+    expect(image).toHaveAttribute("src", second.previewPages![0]!.src);
+    expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toBe(mark);
+    expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
+    expect(screen.getByRole("checkbox", { name: "Подсветка: Даты" })).not.toBeChecked();
+    expect(screen.getByRole("tab", { name: "Источник" })).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Свернуть источник в боковую панель" }));
+    expect(screen.getByRole("img")).toBe(image);
+    expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toBe(mark);
+    expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
+    expect(screen.getByRole("checkbox", { name: "Подсветка: Даты" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Развернуть источник на весь экран" })).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "Развернуть источник на весь экран" }));
+    fireEvent.click(screen.getByRole("button", { name: "Следующий документ" }));
+    fireEvent.load(screen.getByRole("img"));
+    expect(screen.getByRole("img")).toHaveAccessibleName(/06_Служебная_записка_КЛ-84.docx/);
+    expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toHaveAttribute("aria-label", `Подсвеченный фрагмент: ${production.sources[2]!.text}`);
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-fullscreen", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Предыдущий документ" }));
+    fireEvent.load(screen.getByRole("img"));
+    expect(screen.getByRole("img")).toHaveAttribute("src", second.previewPages![0]!.src);
+    expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toHaveAttribute("aria-label", `Подсвеченный фрагмент: ${secondSource.text}`);
+    fireEvent.click(screen.getByRole("button", { name: "Вернуться к таблице" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(details).toBeInTheDocument();
+  });
+
   it("returns from an original document to the same expanded indicator", () => {
     render(
       <ChecksProvider>

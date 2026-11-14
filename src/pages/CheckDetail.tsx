@@ -23,6 +23,7 @@ function Reconciliation({ check }: { check: CheckData }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selection, setSelection] = useState(() => ({ rowId: (check.rows.find((row) => !row.service && row.status === "discrepancy") ?? check.rows[0])?.id ?? "", sourceIndex: 0 }));
   const [panelOpen, setPanelOpen] = useState(false);
+  const [sourceExpanded, setSourceExpanded] = useState(false);
   const [tab, setTab] = useState<PanelTab>("source");
   const [focus, setFocus] = useState(false);
   const returnFocus = useRef<HTMLElement | null>(null);
@@ -78,6 +79,7 @@ function Reconciliation({ check }: { check: CheckData }) {
     setSelection({ rowId, sourceIndex });
     setTab("source");
     setFocus(false);
+    setSourceExpanded(false);
     setPanelOpen(true);
   }
   function moveIssue(direction: number) {
@@ -162,11 +164,17 @@ function Reconciliation({ check }: { check: CheckData }) {
       </section>
       {check.excluded.length > 0 && <details className="excluded-disclosure"><summary>Исключённые документы <span>{check.excluded.length}</span><ChevronRight size={16} /></summary><ExcludedDocs check={check} /></details>}
       <Sheet open={panelOpen && !!selected} onOpenChange={setPanelOpen}>
-        <SheetContent side="right" className="source-sheet flex w-full flex-col gap-0 !p-0 sm:max-w-[800px]" onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
+        <SheetContent side="right" data-fullscreen={sourceExpanded} className="source-sheet flex w-full flex-col gap-0 !p-0 sm:max-w-[800px]" onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
           <div className="source-sheet-header">
             <SheetTitle>Источник документа</SheetTitle>
             <SheetDescription className="sr-only">Документ и подсветка выбранного значения</SheetDescription>
-            <SheetClose asChild><Button variant="ghost" size="sm" aria-label="Вернуться к таблице">К таблице</Button></SheetClose>
+            <div className="source-sheet-header-actions">
+              <Button variant="ghost" size="sm" aria-label={sourceExpanded ? "Свернуть источник в боковую панель" : "Развернуть источник на весь экран"} title={sourceExpanded ? "Свернуть источник в боковую панель" : "Развернуть источник на весь экран"} aria-pressed={sourceExpanded} onClick={() => setSourceExpanded((previous) => !previous)}>
+                {sourceExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                <span className="hidden sm:inline">{sourceExpanded ? "Свернуть" : "На весь экран"}</span>
+              </Button>
+              <SheetClose asChild><Button variant="ghost" size="sm" aria-label="Вернуться к таблице">К таблице</Button></SheetClose>
+            </div>
           </div>
           <div className="min-h-0 flex-1 overflow-hidden">
             <SidePanel check={check} row={selected} sourceIndex={selection.sourceIndex} onSourceChange={(sourceIndex) => setSelection((previous) => ({ ...previous, sourceIndex }))} tab={tab} onTab={setTab} />

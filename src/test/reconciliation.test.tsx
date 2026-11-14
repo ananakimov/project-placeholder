@@ -66,7 +66,7 @@ describe("Reconciliation workspace", () => {
     closeDocument();
     const details = expand(b, "b-8");
     expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
-    expect(within(details).getByText("Рекомендация")).toBeInTheDocument();
+    expect(within(details).queryByText("Рекомендация")).not.toBeInTheDocument();
     openDocument(b, "b-8");
     expect(screen.getByRole("region", { name: "Источник документа" })).toBeInTheDocument();
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
@@ -105,29 +105,51 @@ describe("Reconciliation workspace", () => {
     expect(screen.getByRole("region", { name: "Источник документа" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "Правило проверки" })).not.toBeInTheDocument();
   });
-  it("moves between actual discrepancies, expanding each and excluding service totals", () => {
+  it("starts with no active indicator and activates only the group open in the source pane", () => {
     desk();
-    const issues = b.rows.filter((row) => !row.service && row.status === "discrepancy");
-    expect(screen.getByRole("button", { name: issues[0]!.name })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Предыдущее расхождение" })).toBeDisabled();
-    for (const issue of issues.slice(1)) {
-      fireEvent.click(screen.getByRole("button", { name: "Следующее расхождение" }));
-      expect(screen.getByRole("button", { name: issue.name })).toHaveAttribute("aria-expanded", "true");
-      expect(screen.getByRole("button", { name: issue.name })).toHaveAttribute("aria-pressed", "true");
-    }
-    expect(screen.getByRole("button", { name: "Следующее расхождение" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Предыдущее расхождение" }));
-    expect(screen.getByRole("button", { name: issues.at(-2)!.name })).toHaveAttribute("aria-pressed", "true");
+    const table = screen.getByRole("table", { name: "Показатели КФЗ" });
+    const activeRows = () => table.querySelectorAll('tr[data-selected="true"]');
+    const payroll = screen.getByRole("button", { name: "Оплата труда" }).closest("tr");
+    const travel = screen.getByRole("button", { name: "Командировки" }).closest("tr");
+    expect(activeRows()).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: /(?:Предыдущее|Следующее) расхождение/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
+    expect(activeRows()).toHaveLength(0);
+    openDocument(b, "b-1");
+    expect([...activeRows()]).toEqual([payroll]);
+    expand(b, "b-8");
+    expect([...activeRows()]).toEqual([payroll]);
+    openDocument(b, "b-8");
+    expect([...activeRows()]).toEqual([travel]);
+
+    const picker = screen.getByRole("combobox", { name: "Документы комплекта" });
+    const travelDoc = (picker as HTMLSelectElement).value;
+    const report = b.docs.find((doc) => doc.type === "КФЗ")!;
+    fireEvent.change(picker, { target: { value: report.id } });
+    expect(activeRows()).toHaveLength(0);
+    fireEvent.change(picker, { target: { value: travelDoc } });
+    expect([...activeRows()]).toEqual([travel]);
+
+    closeDocument();
+    expect(activeRows()).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
+    expect([...activeRows()]).toEqual([travel]);
   });
-  it("shows source metadata, addends and the exact total without confusing a document with the aggregate", () => {
+  it("lists the source documents with their own amounts and recorded fragments", () => {
     desk();
     const details = expand(b, "b-1");
-    expect(within(details).getByText("№ ВЗ-08 · 31.08.2026 · Стр. 1")).toBeInTheDocument();
-    expect(screen.getByLabelText("Сумма документов: Оплата труда")).toHaveTextContent("380\u202f000,00 + 380\u202f000,00 + 375\u202f000,00 + 380\u202f000,00 = 1\u202f515\u202f000,00 ₽", { normalizeWhitespace: false });
+    const documents = within(details).getAllByRole("listitem");
+    expect(documents).toHaveLength(4);
+    expect(within(documents[2]!).getByText("№ ВЗ-08 · 31.08.2026 · Стр. 1")).toBeInTheDocument();
+    expect(documents[2]).toHaveTextContent(/375\s000,00 ₽/);
+    expect(within(details).queryByText("Разница Δ")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Сумма документов: Оплата труда")).not.toBeInTheDocument();
     openDocument(b, "b-1");
     const august = b.docs.find((doc) => doc.number === "ВЗ-08")!;
     fireEvent.change(screen.getByRole("combobox", { name: "Документы комплекта" }), { target: { value: august.id } });
     expect(screen.getByLabelText(/Подсвеченный фрагмент: Итого: 375\s000,00/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Оплата труда" }).closest("tr")).toHaveAttribute("data-selected", "true");
     expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
   });
   it("does not sum ambiguous document candidates as if they were accepted addends", () => {
@@ -144,24 +166,12 @@ describe("Reconciliation workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
     expect(screen.getByRole("region", { name: "Подробности: Оплата труда" })).toBeInTheDocument();
   });
-  it("disables discrepancy navigation when everything is verified", () => {
-    desk(a);
-    expect(screen.getByText("Расхождений нет")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Следующее расхождение" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Предыдущее расхождение" })).toBeDisabled();
-  });
-  it("navigates with Alt + arrows but does not hijack text editing", () => {
-    desk();
-    fireEvent.keyDown(screen.getByRole("textbox", { name: "Поиск показателя или документа" }), { key: "ArrowDown", altKey: true });
-    expect(screen.getByRole("button", { name: b.rows[0]!.name })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.keyDown(screen.getByRole("region", { name: "Рабочее место сверки" }), { key: "ArrowDown", altKey: true });
-    expect(screen.getByRole("button", { name: "Предыдущее расхождение" })).toBeEnabled();
-  });
-  it("shows missing evidence and recommendations in a source-less expanded row", () => {
+  it("keeps the explanation in the table and displays an empty document state", () => {
     const g = checks.find((check) => check.id === "g")!;
     desk(g); const details = expand(g, "g-5");
     expect(within(details.closest("tr")!.previousElementSibling as HTMLElement).getByText(/не подтверждена отдельным расчётом/)).toBeInTheDocument();
-    expect(within(details).getByText("Рекомендация")).toBeInTheDocument();
+    expect(within(details).getByText("Подтверждающих документов нет.")).toBeInTheDocument();
+    expect(within(details).queryByText("Рекомендация")).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
   });
   it("keeps the selected page and zoom when the source panel is collapsed and restored", () => {
@@ -189,15 +199,6 @@ describe("Reconciliation workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /Открыть документ:.*АО-44/ }));
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
     expect(screen.getByLabelText(/Подсвеченный фрагмент/)).toBeInTheDocument();
-  });
-  it("does not show one indicator's evidence next to another active discrepancy", () => {
-    desk();
-    openDocument(b, "b-1");
-    fireEvent.click(screen.getByRole("button", { name: "Следующее расхождение" }));
-    expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
-    expect(screen.getByRole("button", { name: "Субподряд: этап 2.2" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("combobox", { name: "Документы комплекта" })).toHaveValue(b.docs.find((doc) => doc.type === "КФЗ")!.id);
   });
   it("keeps metadata and highlights synchronized across documents", () => {
     desk(); openDocument(b, "b-1");

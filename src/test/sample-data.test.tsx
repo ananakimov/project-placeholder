@@ -88,19 +88,18 @@ describe("Attached synthetic 2027 sample", () => {
     expect(g.docs.find((document) => document.fileName!.startsWith("12_"))).toMatchObject({ number: "СВ-0427", date: "29.04.2027" });
     expect(g.docs.find((document) => document.fileName!.startsWith("15_"))).toMatchObject({ contract: "SYN-27/04-019" });
   });
-  it("renders the 2027 heading and opens nested values without adding independent indicators", () => {
+  it("renders the 2027 heading and only source documents in the expanded indicator", () => {
     render(<ChecksProvider><CheckHeader check={g} /><CheckDetail check={g} /></ChecksProvider>);
     expect(screen.getByRole("heading", { name: "КФЗ №3/7" })).toBeInTheDocument();
     expect(screen.getByText("3 этап, 2027 г.")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Показатели КФЗ" });
     expect(within(table).getAllByRole("row")).toHaveLength(8);
     const payroll = g.rows.find((row) => row.id === "g-1")!;
-    expect(screen.queryByRole("region", { name: `В том числе: ${payroll.name}` })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: payroll.name }));
-    fireEvent.click(screen.getByText("В том числе — по КФЗ", { exact: true }));
-    const nested = screen.getByRole("region", { name: `В том числе: ${payroll.name}` });
-    expect(within(nested).getByText("основная заработная плата")).toBeInTheDocument();
-    expect(nested).toHaveTextContent(/4\s300\s000,00/);
+    const details = within(screen.getByRole("region", { name: `Подробности: ${payroll.name}` }));
+    expect(details.getAllByRole("listitem")).toHaveLength(payroll.sources.length);
+    expect(details.queryByText("В том числе — по КФЗ")).not.toBeInTheDocument();
+    expect(details.queryByText("Возможные причины")).not.toBeInTheDocument();
     expect(within(table).getAllByRole("row")).toHaveLength(9);
     expect(screen.getByRole("button", { name: "Все 6" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.queryByText("Субподряд")).not.toBeInTheDocument();

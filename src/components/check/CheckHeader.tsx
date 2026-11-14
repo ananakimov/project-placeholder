@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { Check } from "@/data/mock";
 import { checkLocation } from "@/lib/check-location";
 import { checkName } from "@/lib/check-name";
@@ -26,13 +24,6 @@ export function CheckHeader({ check, versionControls }: {
             <span className="tabular-nums">
               {check.contract && `Договор ${check.contract}`}{check.contract && check.period && " · "}{check.period && `Период ${check.period}`}
             </span>
-            <Badge variant="outline" className={cn("font-normal", {
-              "bg-verified-bg text-verified": check.conclusion === "Достоверен",
-              "bg-discrepancy-bg text-discrepancy": check.conclusion === "Недостоверен",
-              "bg-unverified-bg text-unverified": check.conclusion === "Подтвердить полностью нельзя",
-            })}>
-              {check.conclusion}
-            </Badge>
           </div>
         </div>
       </div>

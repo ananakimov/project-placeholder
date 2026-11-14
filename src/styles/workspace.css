@@ -590,16 +590,6 @@ button:disabled {
   padding: 10px 12px;
   border-radius: 5px;
 }
-.conclusion-title {
-  display: inline-block;
-  font-family: var(--font-sans);
-  font-size: 32px;
-  font-weight: 500;
-  line-height: 1.3;
-  margin: 10px 0;
-  padding: 3px 10px;
-  border-radius: 5px;
-}
 .conclusion-page .coverage-verified {
   background: var(--ui-lime);
 }
@@ -616,11 +606,6 @@ button:disabled {
 @media (max-width: 1000px) {
   .conclusion-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-@media (max-width: 700px) {
-  .conclusion-title {
-    font-size: 26px;
   }
 }
 /* Upload reference: separate bordered rows, metadata underneath, percent and ring at right. */
@@ -1126,28 +1111,6 @@ button:disabled {
   margin-left: 4px;
   padding-left: 12px;
 }
-.issue-navigation {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.issue-counter {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--ui-secondary);
-  margin-right: 8px;
-  white-space: nowrap;
-}
-.issue-counter b {
-  font-weight: 600;
-  color: var(--ui-ink);
-}
-.issue-counter.no-issues {
-  color: #39834e;
-}
-.issue-navigation > button,
 .document-picker > button,
 .document-toolbar button {
   display: grid;
@@ -1160,12 +1123,10 @@ button:disabled {
   color: var(--ui-primary);
   flex-shrink: 0;
 }
-.issue-navigation button:disabled,
 .document-picker > button:disabled,
 .document-toolbar button:disabled {
   opacity: 0.35;
 }
-.issue-navigation button:not(:disabled):hover,
 .document-picker > button:not(:disabled):hover,
 .document-toolbar button:not(:disabled):hover {
   background: var(--ui-selected);
@@ -2535,9 +2496,6 @@ kbd {
   .reconciliation:not(.reconcile-focus) .reconcile-commandbar {
     flex-wrap: wrap;
   }
-  .reconciliation:not(.reconcile-focus) .issue-navigation {
-    margin-left: auto;
-  }
   .reconciliation:not(.reconcile-focus) .reconcile-panes {
     display: flex;
     flex-direction: column;
@@ -2571,9 +2529,6 @@ kbd {
   .reconcile-commandbar {
     flex-wrap: wrap;
     gap: 10px;
-  }
-  .issue-navigation {
-    margin-left: auto;
   }
   .reconcile-panes {
     display: flex;
@@ -2805,14 +2760,6 @@ kbd {
   }
   .reconcile-commandbar {
     padding: 12px;
-  }
-  .issue-navigation {
-    width: 100%;
-    justify-content: flex-end;
-  }
-  .issue-counter {
-    margin-right: auto;
-    font-size: 12px;
   }
   .reconcile-left-header {
     padding: 18px 14px;

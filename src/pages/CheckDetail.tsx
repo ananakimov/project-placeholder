@@ -134,7 +134,7 @@ function Reconciliation({ check, version }: ResultProps) {
                     </span>
                   </td>
                   <td className="indicator-explanation">
-                    <IndicatorExplanation row={row} docs={docById} onSource={(index, trigger) => openSource(row, index, trigger)} />
+                    <IndicatorExplanation row={row} />
                   </td>
                 </tr>
                 {isExpanded && <tr><td colSpan={6} className="!p-0 !text-left"><div id={`details-${row.id}`} role="region" aria-label={`Подробности: ${row.name}`} className="border-b bg-card px-4 py-3">

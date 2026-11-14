@@ -54,6 +54,9 @@ function Reconciliation({ check }: { check: CheckData }) {
     const next = rows.find((row) => statusFilter(row) && row.status === "discrepancy") ?? rows[0];
     setRowId(next?.id ?? "");
   }, [rows, rowId]);
+  useEffect(() => {
+    if (evidence && !rows.some((row) => row.id === evidence.rowId)) setPanelOpen(false);
+  }, [evidence, rows]);
 
   useEffect(() => {
     if (!scrollTarget) return;
@@ -63,6 +66,7 @@ function Reconciliation({ check }: { check: CheckData }) {
     setScrollTarget(null);
   }, [scrollTarget, rows]);
   function toggleRow(rowId: string) {
+    if (evidence?.rowId !== rowId) setPanelOpen(false);
     setRowId(rowId);
     setExpanded((previous) => {
       const next = new Set(previous);
@@ -74,8 +78,10 @@ function Reconciliation({ check }: { check: CheckData }) {
     returnFocus.current = trigger;
     setEvidence(next);
     setPanelOpen(true);
-    workspace.current?.scrollIntoView?.({ block: "nearest" });
     requestAnimationFrame(() => {
+      workspace.current?.scrollIntoView?.({
+        block: window.matchMedia?.("(max-width: 700px)")?.matches ? "start" : "nearest",
+      });
       const table = workspace.current?.querySelector<HTMLElement>(".source-workspace-table");
       const indicator = document.getElementById(`indicator-${next.rowId}`);
       if (table && indicator && table.scrollHeight > table.clientHeight) {
@@ -107,7 +113,7 @@ function Reconciliation({ check }: { check: CheckData }) {
     setPanelOpen(false);
     requestAnimationFrame(() => {
       const trigger = returnFocus.current;
-      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+      if (trigger?.isConnected) trigger.focus({ preventScroll: !window.matchMedia?.("(max-width: 700px)")?.matches });
       else eye.current?.focus({ preventScroll: true });
     });
   }
@@ -115,6 +121,7 @@ function Reconciliation({ check }: { check: CheckData }) {
     const index = issueIndex < 0 ? (direction > 0 ? 0 : discrepancies.length - 1) : issueIndex + direction;
     const row = discrepancies[index];
     if (!row) return;
+    if (evidence?.rowId !== row.id) setPanelOpen(false);
     setQuery(""); setFilter("discrepancy");
     setRowId(row.id);
     setExpanded((previous) => new Set(previous).add(row.id));
@@ -218,7 +225,17 @@ function Reconciliation({ check }: { check: CheckData }) {
           aria-label={sourceVisible ? "Скрыть источник документа" : "Показать источник документа"}
           title={evidence ? (sourceVisible ? "Скрыть источник документа" : "Показать источник документа") : "Выберите документ в таблице"}
           aria-expanded={sourceVisible} aria-controls="check-source-panel"
-          onClick={() => sourceVisible ? hideEvidence() : setPanelOpen(true)}>
+          onClick={() => {
+            if (sourceVisible) hideEvidence();
+            else if (evidence) {
+              setRowId(evidence.rowId);
+              if (!rows.some((row) => row.id === evidence.rowId)) {
+                setQuery("");
+                setFilter("all");
+              }
+              setPanelOpen(true);
+            }
+          }}>
           {sourceVisible ? <Eye size={18} aria-hidden="true" /> : <EyeOff size={18} aria-hidden="true" />}
         </button>
       </aside>
@@ -233,6 +250,7 @@ function Reconciliation({ check }: { check: CheckData }) {
       <AdditionalChecks check={check} onExcluded={openExcluded} onDiagnostic={openDiagnostic} onIndicator={(id) => {
         setQuery("");
         setFilter("all");
+        if (evidence?.rowId !== id) setPanelOpen(false);
         setRowId(id);
         setExpanded((previous) => new Set(previous).add(id));
         setScrollTarget(id);

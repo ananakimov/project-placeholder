@@ -110,7 +110,7 @@ describe("Reconciliation workspace", () => {
     expect(screen.queryByLabelText("Сумма документов: Аренда помещения")).not.toBeInTheDocument();
   });
   it("clears stale evidence for empty searches and keeps the expansion after reset", () => {
-    desk(); expand(b, "b-1");
+    desk(); openDocument(b, "b-1");
     fireEvent.change(screen.getByRole("textbox", { name: "Поиск показателя или документа" }), { target: { value: "несуществующий документ" } });
     expect(screen.getByText("Показатели не найдены")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
@@ -146,6 +146,15 @@ describe("Reconciliation workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
     expect(screen.getByText("Стр. 2 / 2")).toBeInTheDocument();
+  });
+  it("does not show one indicator's evidence next to another active discrepancy", () => {
+    desk();
+    openDocument(b, "b-1");
+    fireEvent.click(screen.getByRole("button", { name: "Следующее расхождение" }));
+    expect(screen.queryByRole("region", { name: "Источник документа" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));
+    expect(screen.getByRole("button", { name: "Оплата труда" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("region", { name: "Источник документа" })).toHaveTextContent("Оплата труда");
   });
   it("keeps metadata and highlights synchronized across documents", () => {
     desk(); openDocument(b, "b-1");

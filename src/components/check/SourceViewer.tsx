@@ -62,6 +62,7 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
   const imageFailed = Boolean(pageImage && failedImage === pageImage.src);
   const pageReady = !pageImage || (loadedImage === pageImage.src && !imageFailed);
   const sourceField = source && doc.fields.find((field) => isSourceField(field, source));
+  const sourceAmount = sourceField && annotationKind(sourceField.label) !== "money" ? null : source?.amount;
   const sourceKind = sourceField
     ? annotationKind(sourceField.label)
     : source?.amount
@@ -371,10 +372,10 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
       {source && <div className="document-source-footer">
         <div>
           <small>
-            {source.amount ? "Сумма в выбранном документе" : "Выбранный фрагмент"} · стр.{" "}
+            {sourceAmount ? "Сумма в выбранном документе" : "Выбранный фрагмент"} · стр.{" "}
             {source.page}
           </small>
-          <strong>{source.amount ? `${formatMoney(source.amount)} ₽` : source.text}</strong>
+          <strong>{sourceAmount ? `${formatMoney(sourceAmount)} ₽` : source.text}</strong>
         </div>
         <button
           onClick={locateSource}
@@ -382,7 +383,7 @@ function Viewer({ source, doc }: { source: SourceRef | null; doc: Doc }) {
           title="Перейти к подсвеченному фрагменту"
         >
           <Crosshair size={16} />
-          {source.amount ? "К сумме" : "К фрагменту"}
+          {sourceAmount ? "К сумме" : "К фрагменту"}
         </button>
       </div>}
     </div>

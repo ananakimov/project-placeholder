@@ -16,7 +16,7 @@ export function AcceptCheck({ check, version = 1 }: { check: CheckData; version?
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2" data-print-hide>
       {acceptedAt != null ? (
         <p className="flex items-center gap-2 text-sm text-verified" role="status">
-          <Check size={16} aria-hidden="true" /> Принята · {acceptanceDate.format(acceptedAt)}
+          <Check size={16} aria-hidden="true" /> Принят · {acceptanceDate.format(acceptedAt)}
         </p>
       ) : (
         <Button type="button" size="lg" disabled={!checkHistory.ready}
@@ -24,7 +24,6 @@ export function AcceptCheck({ check, version = 1 }: { check: CheckData; version?
           Принять проверку
         </Button>
       )}
-      <span className="text-xs text-muted-foreground">Отметка о завершении работы, без электронной подписи.</span>
       {error && acceptedAt == null && <p className="text-sm text-destructive" role="alert">Не удалось сохранить принятие в браузере.</p>}
     </div>
   );

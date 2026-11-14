@@ -411,6 +411,11 @@ button:disabled {
   font-size: 12px;
   white-space: nowrap;
 }
+.result-chip.accepted {
+  background: var(--ui-lime);
+  color: var(--ui-ink);
+  font-weight: 600;
+}
 .result-chip i {
   height: 6px;
   width: 6px;

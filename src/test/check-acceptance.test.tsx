@@ -24,7 +24,8 @@ describe("Demo acceptance and archive", () => {
     render(<ChecksProvider><CheckConclusion check={check} /><Checks /></ChecksProvider>);
     expect(screen.getByRole("link", { name: "КФЗ №3/7" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Принять проверку" }));
-    expect(screen.getByRole("status")).toHaveTextContent("Принята");
+    expect(screen.getByRole("status")).toHaveTextContent("Принят");
+    expect(screen.queryByText(/завершении работы, без электронной подписи/)).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Недостоверен" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "КФЗ №3/7" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Приняты 1" }));
@@ -32,6 +33,7 @@ describe("Demo acceptance and archive", () => {
     expect(check).toEqual(original);
     cleanup();
     render(<ChecksProvider><Checks archive /></ChecksProvider>);
+    expect(screen.getByRole("cell", { name: "Принят" }).firstElementChild).toHaveClass("accepted");
     expect(within(screen.getByRole("table")).getAllByRole("link").map((link) => link.textContent))
       .toEqual(["КФЗ №3/7"]);
   });

@@ -186,7 +186,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                         </div>
                       </div>
                     </td>
-                    <td><span className={cn("result-chip", theme)}><i />{status}</span></td>
+                    <td><span className={cn("result-chip", showAccepted ? "accepted" : theme)}><i aria-hidden />{showAccepted ? "Принят" : status}</span></td>
                     <td>
                       <CoverageBar c={check.coverage} />
                       <small className="coverage-description">

@@ -29,7 +29,7 @@ export function VersionControls({ check, selected }: { check: Check; selected: D
             <option key={version.number} value={version.number} disabled={version === pending}>
               {version.number} · {version.number === 1 ? dateOnly.format(version.createdAt) : dateTime.format(version.createdAt)}
               {version.number === current.number ? " · текущая" : ""}
-              {version.acceptedAt !== null ? " · принята" : ""}
+              {version.acceptedAt !== null ? " · принят" : ""}
               {version === pending ? " · в работе" : ""}
             </option>
           ))}

@@ -127,88 +127,90 @@ function Viewer({ source, doc }: { source: SourceRef; doc: Doc }) {
           </span>
         </div>
       )}
-      <fieldset className="annotation-legend" disabled={!readable}>
-        <legend>Извлечённые данные</legend>
-        <div>
-          {annotationTypes.map(({ kind, label }) => (
-            <label key={kind} data-kind={kind}>
-              <input
-                type="checkbox"
-                aria-label={`Подсветка: ${label}`}
-                checked={highlight && enabledKinds.has(kind)}
-                onChange={(event) => {
-                  const checked = event.target.checked;
-                  setHighlight(true);
-                  setEnabledKinds((previous) => {
-                    const next = highlight ? new Set(previous) : new Set<AnnotationKind>();
-                    if (checked) next.add(kind);
-                    else next.delete(kind);
-                    return next;
-                  });
-                }}
-              />
-              <span className="annotation-checkbox">
-                <Check size={12} strokeWidth={2.5} />
-              </span>
-              {label}
-            </label>
-          ))}
+      <div className="document-controls">
+        <fieldset className="annotation-legend" disabled={!readable}>
+          <legend>Извлечённые данные</legend>
+          <div>
+            {annotationTypes.map(({ kind, label }) => (
+              <label key={kind} data-kind={kind}>
+                <input
+                  type="checkbox"
+                  aria-label={`Подсветка: ${label}`}
+                  checked={highlight && enabledKinds.has(kind)}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setHighlight(true);
+                    setEnabledKinds((previous) => {
+                      const next = highlight ? new Set(previous) : new Set<AnnotationKind>();
+                      if (checked) next.add(kind);
+                      else next.delete(kind);
+                      return next;
+                    });
+                  }}
+                />
+                <span className="annotation-checkbox">
+                  <Check size={12} strokeWidth={2.5} />
+                </span>
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="document-toolbar">
+          <div className="page-controls">
+            <button
+              aria-label="Предыдущая страница"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span aria-live="polite">
+              Стр. {page} / {doc.pages}
+            </span>
+            <button
+              aria-label="Следующая страница"
+              disabled={page >= doc.pages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+          <div className="zoom-controls">
+            <button
+              aria-label="Уменьшить масштаб"
+              disabled={zoom <= 75}
+              onClick={() => setZoom((z) => z - 25)}
+            >
+              <Minus size={14} />
+            </button>
+            <span aria-label="Масштаб документа">{zoom}%</span>
+            <button
+              aria-label="Увеличить масштаб"
+              disabled={zoom >= 175}
+              onClick={() => setZoom((z) => z + 25)}
+            >
+              <Plus size={14} />
+            </button>
+            <button
+              aria-label="Сбросить масштаб"
+              title="По ширине"
+              disabled={zoom === 100}
+              onClick={() => setZoom(100)}
+            >
+              <RotateCcw size={13} />
+            </button>
+          </div>
+          <button
+            aria-label={highlight ? "Скрыть подсветку" : "Показать подсветку"}
+            title="Подсветка"
+            aria-pressed={highlight}
+            disabled={!readable}
+            onClick={() => setHighlight((h) => !h)}
+          >
+            {highlight ? <Eye size={15} /> : <EyeOff size={15} />}
+          </button>
         </div>
-      </fieldset>
-      <div className="document-toolbar">
-        <div className="page-controls">
-          <button
-            aria-label="Предыдущая страница"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <span aria-live="polite">
-            Стр. {page} / {doc.pages}
-          </span>
-          <button
-            aria-label="Следующая страница"
-            disabled={page >= doc.pages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            <ChevronRight size={15} />
-          </button>
-        </div>
-        <div className="zoom-controls">
-          <button
-            aria-label="Уменьшить масштаб"
-            disabled={zoom <= 75}
-            onClick={() => setZoom((z) => z - 25)}
-          >
-            <Minus size={14} />
-          </button>
-          <span aria-label="Масштаб документа">{zoom}%</span>
-          <button
-            aria-label="Увеличить масштаб"
-            disabled={zoom >= 175}
-            onClick={() => setZoom((z) => z + 25)}
-          >
-            <Plus size={14} />
-          </button>
-          <button
-            aria-label="Сбросить масштаб"
-            title="По ширине"
-            disabled={zoom === 100}
-            onClick={() => setZoom(100)}
-          >
-            <RotateCcw size={13} />
-          </button>
-        </div>
-        <button
-          aria-label={highlight ? "Скрыть подсветку" : "Показать подсветку"}
-          title="Подсветка"
-          aria-pressed={highlight}
-          disabled={!readable}
-          onClick={() => setHighlight((h) => !h)}
-        >
-          {highlight ? <Eye size={15} /> : <EyeOff size={15} />}
-        </button>
       </div>
       <div
         className="document-viewport"

@@ -1,3 +1,4 @@
+import { checkLocation } from "@/lib/check-location";
 import { useNavigate } from "@tanstack/react-router";
 import { useChecks } from "@/context/ChecksContext";
 import type { DemoCheckVersion } from "@/context/demo-check-history";
@@ -22,7 +23,7 @@ export function VersionControls({ check, selected }: { check: Check; selected: D
         <select className="max-w-full rounded-md border bg-card px-2 py-1.5" value={selected.number}
           onChange={(event) => {
             const version = Number(event.target.value);
-            void navigate({ to: ".", search: { version } });
+            void navigate({ to: ".", search: checkLocation(check.id, version).search });
           }}>
           {versions.map((version) => (
             <option key={version.number} value={version.number} disabled={version === pending}>
@@ -39,7 +40,7 @@ export function VersionControls({ check, selected }: { check: Check; selected: D
         submit={(docs) => {
           const saved = checkHistory.recheck(check, selected.number, docs);
           if (saved) {
-            void navigate({ to: ".", search: {} });
+            void navigate({ to: ".", search: checkLocation(check.id).search });
           }
           return saved;
         }} />

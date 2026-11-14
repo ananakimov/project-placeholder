@@ -63,12 +63,12 @@ export function ChecksProvider({ children }: { children: ReactNode }) {
 
   const checks = useMemo(
     () =>
-      baseChecks.map((b) => {
+      [...baseChecks, ...demoQueue.results].map((b) => {
         const c = applyVariants(b, applied[b.id] ?? {});
         const state: Check["state"] = signature[b.id] ? "Подписано" : resign.has(b.id) ? "Нужна повторная подпись" : b.state;
         return { ...c, state };
       }),
-    [applied, signature, resign],
+    [applied, signature, resign, demoQueue.results],
   );
 
   const value: Ctx = {

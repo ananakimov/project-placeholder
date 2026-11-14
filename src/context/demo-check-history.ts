@@ -37,7 +37,7 @@ function readHistory(): History | undefined {
 
 function initialVersion(check: Check): DemoCheckVersion {
   const [day, month, year] = check.date.split(".").map(Number);
-  const createdAt = Date.UTC(year!, month! - 1, day!);
+  const createdAt = check.createdAt ?? Date.UTC(year!, month! - 1, day!);
   return { number: 1, createdAt, readyAt: createdAt, acceptedAt: null, result: check };
 }
 

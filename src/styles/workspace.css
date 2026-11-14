@@ -3383,3 +3383,38 @@ kbd {
 .row-status:focus .indicator-status-label { display: block; }
 
 .check-header-controls .check-tabs { padding-bottom: 0; }
+
+.queue-card { margin-top: 24px; padding: 20px; }
+.queue-card .upload-card-header { margin-bottom: 12px; }
+.queue-list { display: grid; gap: 10px; }
+.queue-job { padding: 12px 14px; border: 1px solid var(--ui-line); border-radius: 8px; }
+.queue-job-heading, .queue-job-title, .queue-job-meta, .queue-job-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.queue-job-heading { flex-wrap: wrap; justify-content: space-between; gap: 10px; }
+.queue-job-title .file-symbol { width: 36px; height: 36px; flex-shrink: 0; }
+.queue-job-title h3 { font-size: 14px; font-weight: 600; }
+.queue-job-meta { flex-wrap: wrap; gap: 3px 8px; color: var(--ui-secondary); font-size: 12px; }
+.queue-job-meta span { white-space: nowrap; }
+.queue-job-meta > * + *::before { content: "·"; padding-right: 8px; }
+.queue-job-state { justify-content: space-between; margin-top: 10px; font-size: 13px; font-weight: 500; }
+.queue-progress { margin: 6px 0 8px; }
+.queue-progress span { background: var(--ui-primary); transition: width 170ms linear; }
+.queue-progress[data-complete="true"] span { background: var(--ui-lime); }
+.queue-stages { display: flex; flex-wrap: wrap; gap: 5px; }
+.queue-stages li {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--ui-secondary);
+  background: var(--ui-soft);
+}
+.queue-stages li[data-done="true"] { background: var(--ui-mint); color: var(--ui-ink); }
+.queue-stages li[aria-current="step"] { background: var(--ui-selected); color: var(--ui-ink); font-weight: 600; }
+.queue-processed { margin-top: 6px; font-size: 12px; color: var(--ui-secondary); }
+.checks-table .check-result-row td { padding-block: 12px; }

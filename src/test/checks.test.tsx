@@ -51,6 +51,7 @@ describe("Checks list", () => {
     expect(within(screen.getByRole("table")).getByText("Неполные данные", { exact: true })).toBeInTheDocument();
     expect(screen.getAllByText("13.11.2026")).toHaveLength(2);
     expect(screen.queryByText("Всего проверок")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Новая проверка" })).not.toBeInTheDocument();
     expect(screen.queryByText(/^Показано \d/)).not.toBeInTheDocument();
   });
 
@@ -92,9 +93,9 @@ describe("Checks list", () => {
     ]));
     setup();
     expect(screen.getByRole("button", { name: "Все 6" })).toBeInTheDocument();
-    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Демо-задание №newer");
-    expect(screen.getAllByRole("row")[2]).toHaveTextContent("Демо-задание №older");
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Проверка КФЗ · newer");
+    expect(screen.getAllByRole("row")[2]).toHaveTextContent("Проверка КФЗ · older");
     fireEvent.click(screen.getByRole("button", { name: "Есть расхождения 2" }));
-    expect(screen.queryByText("Демо-задание №newer")).not.toBeInTheDocument();
+    expect(screen.queryByText("Проверка КФЗ · newer")).not.toBeInTheDocument();
   });
 });

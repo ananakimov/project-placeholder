@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
+  ArrowDown,
   ArrowUpRight,
   ChevronRight,
   FileSearch,
   Files,
+  Plus,
   Search,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DemoHistory } from "@/components/check/DemoHistory";
@@ -22,7 +25,7 @@ export function countByStatus(c: Check) {
     unverified: rows.filter((r) => r.status === "unverified").length,
   };
 }
-const labels = { all: "Все", discrepancy: "Есть расхождения", unverified: "Неполные данные", verified: "Без расхождений" };
+const labels = { all: "Все проверки", discrepancy: "Есть расхождения", unverified: "Неполные данные", verified: "Без расхождений" };
 type Filter = keyof typeof labels;
 function CoverageBar({ c }: { c: Check["coverage"] }) {
   return (
@@ -69,11 +72,17 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
             Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.
           </p>
         </div>
+        <Button asChild className="new-check-button">
+          <Link to="/checks/new">
+            <Plus size={17} />
+            Новая проверка
+          </Link>
+        </Button>
       </div>
       <div className="checks-section">
         <div className="section-heading">
           <h2>
-            Готовые примеры <span>{checks.length}</span>
+            Ваши проверки <span>{checks.length}</span>
           </h2>
           <div className="legend">
             <i />
@@ -110,13 +119,14 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
-            <label className="checks-sort">
-              Сортировка
-              <select value={sort} onChange={(event) => setSort(event.target.value === "name" ? "name" : "recent")}>
-                <option value="recent">Сначала новые</option>
-                <option value="name">По названию</option>
-              </select>
-            </label>
+            <button
+              className="sort-button"
+              onClick={() => setSort((s) => (s === "recent" ? "name" : "recent"))}
+              aria-label={sort === "recent" ? "Сортировать по названию" : "Сортировать по дате"}
+              title={sort === "recent" ? "По дате · изменить" : "По названию · изменить"}
+            >
+              <SlidersHorizontal size={17} />
+            </button>
           </div>
         </div>
         <div className="checks-table-wrap">
@@ -127,7 +137,11 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                 <th>Документы</th>
                 <th>Покрытие по сумме</th>
                 <th>Результат</th>
-                <th aria-sort={sort === "recent" ? "descending" : "none"}>Дата</th>
+                <th aria-sort={sort === "recent" ? "descending" : "none"}>
+                  <button onClick={() => setSort((s) => (s === "recent" ? "name" : "recent"))}>
+                    Дата <ArrowDown size={12} />
+                  </button>
+                </th>
                 <th aria-label="Открыть" />
               </tr>
             </thead>
@@ -205,7 +219,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
               <FileSearch size={32} />
               <h3>{checks.length ? "Проверки не найдены" : "Здесь появятся ваши проверки"}</h3>
               {checks.length > 0 && <p>Попробуйте другой запрос или сбросьте фильтры.</p>}
-              {checks.length > 0 && (
+              {checks.length ? (
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -214,6 +228,10 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                   }}
                 >
                   Сбросить фильтры
+                </Button>
+              ) : (
+                <Button asChild>
+                  <Link to="/checks/new">Новая проверка</Link>
                 </Button>
               )}
             </div>

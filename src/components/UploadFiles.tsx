@@ -20,11 +20,11 @@ export function UploadFileList({ files, onRemove }: { files: UploadFile[]; onRem
         <span className="!text-xs">{sizeLabel(file.size)}</span>
       </div>
       <div className="upload-file-status !gap-1">
-        <Check className="upload-complete-icon !h-5 !w-5" aria-label="Файл добавлен" />
-        <button type="button" className="upload-remove" aria-label={`Убрать ${file.name}`} onClick={() => onRemove(index)}>
-          <X size={16} />
-        </button>
+        <Check className="upload-complete-icon !h-5 !w-5" strokeWidth={2.5} aria-label="Файл добавлен" />
       </div>
+      <button type="button" className="upload-remove" aria-label={`Убрать ${file.name}`} title="Убрать файл" onClick={() => onRemove(index)}>
+        <X size={18} />
+      </button>
     </li>)}
   </ul>;
 }

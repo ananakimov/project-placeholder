@@ -1,9 +1,7 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowDown, ArrowUp, Check, CheckCheck, CircleHelp, TriangleAlert, ChevronRight, ArrowLeft, FileText, Eye, Maximize2, Minimize2, Search, X } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { AlertCircle, ArrowDown, ArrowUp, Check, CheckCheck, CircleHelp, TriangleAlert, ChevronRight, FileText, Search, X } from "lucide-react";
 import { Money } from "@/components/Money";
-import { SourceViewer } from "@/components/check/SourceViewer";
-import { DocumentFields } from "@/components/check/DocumentFields";
-import { SidePanel } from "@/components/check/SidePanel";
+import { SourceWorkspace, useSourceWorkspace } from "@/components/check/SourceWorkspace";
 import { fieldSource } from "@/components/check/document-annotations";
 import { AdditionalChecks } from "@/components/check/AdditionalChecks";
 import { CheckConclusion } from "@/pages/CheckConclusion";
@@ -19,7 +17,6 @@ const statusLabels: Record<Status, string> = {
 };
 const statusIcons = { verified: Check, discrepancy: TriangleAlert, unverified: CircleHelp };
 const statusFilter = (row: Row) => !row.service && !row.nested;
-type EvidenceSelection = { rowId: string; index: number; sources: readonly SourceRef[] };
 
 type ResultProps = { check: CheckData; version?: number | undefined };
 export function CheckDetail({ check, version }: ResultProps) {
@@ -32,12 +29,9 @@ function Reconciliation({ check, version }: ResultProps) {
   const [rowId, setRowId] = useState(
     () => (check.rows.find((row) => statusFilter(row) && row.status === "discrepancy") ?? check.rows[0])?.id ?? "",
   );
-  const [evidence, setEvidence] = useState<EvidenceSelection | null>(null);
-  const [documentId, setDocumentId] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [sourceExpanded, setSourceExpanded] = useState(false);
-  const returnFocus = useRef<HTMLElement | null>(null);
-  const eye = useRef<HTMLButtonElement>(null);
+  const workspace = useSourceWorkspace(check);
+  const evidenceRowId = workspace.evidence?.row?.id;
+  const { clearEvidence } = workspace;
   const [scrollTarget, setScrollTarget] = useState<string | null>(null);
   const n = countByStatus(check);
   const total = n.verified + n.discrepancy + n.unverified;
@@ -49,9 +43,7 @@ function Reconciliation({ check, version }: ResultProps) {
     return check.rows.filter((row) => (filter === "all" || (statusFilter(row) && row.status === filter)) &&
       (!q || row.name.toLowerCase().includes(q) || row.sources.some((source) => `${docById.get(source.docId)?.title} ${docById.get(source.docId)?.number}`.toLowerCase().includes(q))));
   }, [check.rows, filter, query, docById]);
-  const evidenceRow = evidence && check.rows.find((row) => row.id === evidence.rowId);
   const selected = rows.find((row) => row.id === rowId) ?? null;
-  const selectedDocument = documentId && docById.get(documentId);
 
   useEffect(() => {
     if (rows.some((row) => row.id === rowId)) return;
@@ -59,12 +51,8 @@ function Reconciliation({ check, version }: ResultProps) {
     setRowId(next?.id ?? "");
   }, [rows, rowId]);
   useEffect(() => {
-    if (evidence && !rows.some((row) => row.id === evidence.rowId)) {
-      setPanelOpen(false);
-      setEvidence(null);
-      setSourceExpanded(false);
-    }
-  }, [evidence, rows]);
+    if (evidenceRowId && !rows.some((row) => row.id === evidenceRowId)) clearEvidence();
+  }, [clearEvidence, evidenceRowId, rows]);
 
   useEffect(() => {
     if (!scrollTarget) return;
@@ -83,60 +71,31 @@ function Reconciliation({ check, version }: ResultProps) {
     });
   }
   function clearStaleEvidence(nextRowId: string) {
-    if (evidence && evidence.rowId !== nextRowId) {
-      setEvidence(null);
-      setSourceExpanded(false);
-      setPanelOpen(false);
-    }
+    if (evidenceRowId && evidenceRowId !== nextRowId) clearEvidence();
   }
-  function showEvidence(next: EvidenceSelection, trigger: HTMLElement | null) {
-    returnFocus.current = trigger;
-    if (!rows.some((row) => row.id === next.rowId)) {
+  function showEvidence(row: Row, sources: readonly SourceRef[], index: number, trigger: HTMLElement) {
+    if (!rows.some((item) => item.id === row.id)) {
       setQuery("");
       setFilter("all");
     }
-    setEvidence(next);
-    setDocumentId(null);
-    setPanelOpen(true);
-    requestAnimationFrame(() => {
-      eye.current?.focus({ preventScroll: true });
-    });
-  }
-  function toggleEvidence() {
-    if (panelOpen) {
-      hideEvidence();
-    } else {
-      returnFocus.current = eye.current;
-      setPanelOpen(true);
-    }
+    setRowId(row.id);
+    workspace.openEvidence(row, sources, index, trigger);
   }
   function openSource(row: Row, index: number, trigger: HTMLElement) {
-    setRowId(row.id);
-    showEvidence({ rowId: row.id, index, sources: row.sources }, trigger);
+    showEvidence(row, row.sources, index, trigger);
   }
   function openDiagnostic(docId: string, trigger: HTMLElement) {
     const row = check.rows.find((entry) => entry.sources.some((source) => source.docId === docId));
     const source = row?.sources.find((entry) => entry.docId === docId);
-    if (!row || !source) return;
-    setRowId(row.id);
-    showEvidence({ rowId: row.id, index: 0, sources: [source] }, trigger);
+    if (row && source) showEvidence(row, [source], 0, trigger);
   }
   function openExcluded(item: ExcludedDoc, trigger: HTMLElement) {
     const row = check.rows.find((entry) => item.rowIds?.includes(entry.id)) ?? check.rows[0];
     const doc = check.docs.find((entry) => entry.id === item.docId);
-    const field = doc?.fields.find((entry) => entry.label === item.field);
-    if (!row || !doc || !field) return;
-    setRowId(row.id);
-    showEvidence({ rowId: row.id, index: 0, sources: [fieldSource(doc, field)] }, trigger);
-  }
-  function hideEvidence() {
-    setSourceExpanded(false);
-    setPanelOpen(false);
-    requestAnimationFrame(() => {
-      const trigger = returnFocus.current;
-      if (trigger?.isConnected) trigger.focus({ preventScroll: !window.matchMedia?.("(max-width: 700px)")?.matches });
-      else eye.current?.focus({ preventScroll: true });
-    });
+    if (!doc) return;
+    const field = doc.fields.find((entry) => entry.label === item.field);
+    if (row && field) showEvidence(row, [fieldSource(doc, field)], 0, trigger);
+    else workspace.openDocument(doc, trigger);
   }
   function moveIssue(direction: number) {
     const index = issueIndex < 0 ? (direction > 0 ? 0 : discrepancies.length - 1) : issueIndex + direction;
@@ -157,12 +116,9 @@ function Reconciliation({ check, version }: ResultProps) {
   return (
     <div className="reconciliation-page">
       <CheckConclusion check={check} version={version}>
-      <div className="source-workspace" data-source-open={panelOpen}
-        onKeyDown={(event) => {
-          if (event.key !== "Escape" || !panelOpen) return;
-          if (sourceExpanded) setSourceExpanded(false);
-          else hideEvidence();
-        }}>
+      <div className="source-workspace" data-source-open={workspace.panelOpen}
+        onKeyDown={(event) => { if (event.key === "Escape" && workspace.panelOpen) workspace.close(); }}>
+      <SourceWorkspace check={check} workspace={workspace} />
       <section className="source-workspace-table min-w-0 bg-card" aria-label="Рабочее место сверки"
         onKeyDown={(event) => {
           if ((event.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return;
@@ -241,57 +197,6 @@ function Reconciliation({ check, version }: ResultProps) {
         </div>
         {!rows.length && <div className="reconcile-empty"><Search size={25} /><strong>Показатели не найдены</strong><p>Измените запрос или выберите другой статус.</p><button onClick={() => { setQuery(""); setFilter("all"); }}>Сбросить фильтры</button></div>}
         <div className="reconcile-left-footer"><span>Показателей: {rows.filter(statusFilter).length} из {total}</span></div>
-      </section>
-      <aside className="source-workspace-rail" aria-label="Управление источником" data-print-hide>
-        <button ref={eye} type="button" className={cn("nav-item source-workspace-toggle", panelOpen && "active")}
-          aria-label={panelOpen ? "Скрыть источник документа" : "Показать источник документа"}
-          title={panelOpen ? "Скрыть источник" : "Открыть источник"}
-          aria-expanded={panelOpen} aria-controls="check-source-panel" onClick={toggleEvidence}>
-          <Eye size={21} aria-hidden="true" />
-        </button>
-      </aside>
-      <section id="check-source-panel" aria-label="Источник документа" data-print-hide
-        className="source-workspace-panel compact-source" data-fullscreen={panelOpen && sourceExpanded} inert={!panelOpen} aria-hidden={!panelOpen}>
-        {(evidenceRow || selectedDocument) && <div className="source-panel-actions">
-          <button type="button" className="source-all-documents"
-            onClick={() => { setEvidence(null); setDocumentId(null); setSourceExpanded(false); }}>
-            <ArrowLeft size={15} aria-hidden /> Все документы
-          </button>
-          <button type="button" className="source-all-documents"
-            aria-label={sourceExpanded ? "Свернуть источник в боковую панель" : "Развернуть источник на весь экран"}
-            aria-pressed={sourceExpanded} onClick={() => setSourceExpanded((previous) => !previous)}>
-            {sourceExpanded ? <Minimize2 size={16} aria-hidden /> : <Maximize2 size={16} aria-hidden />}
-            <span>{sourceExpanded ? "Свернуть" : "На весь экран"}</span>
-          </button>
-        </div>}
-        {evidence && evidenceRow ? (
-          <SidePanel check={check} row={evidenceRow} sources={evidence.sources} sourceIndex={evidence.index}
-            onSourceChange={(index) => setEvidence((previous) => previous && { ...previous, index })} />
-        ) : selectedDocument ? (
-          <div className="source-tabs">
-            <h3 className="source-document-title" title={selectedDocument.title}>{selectedDocument.title}</h3>
-            <div className="source-context"><DocumentFields doc={selectedDocument} /></div>
-            <div className="source-document-content"><SourceViewer source={null} doc={selectedDocument} /></div>
-          </div>
-        ) : panelOpen && (
-          <div className="source-library">
-            <h3 className="source-document-title">Документы проверки</h3>
-            {check.docs.length === 0 ? <p>В комплекте нет документов</p> : (
-              <ul className="divide-y" aria-label="Все документы проверки">
-                {check.docs.map((doc) => (
-                  <li key={doc.id}>
-                    <button type="button" onClick={() => setDocumentId(doc.id)}>
-                      <FileText size={16} aria-hidden />
-                      <span>{doc.title}{(doc.number || doc.date) &&
-                        <small>{[doc.number, doc.date].filter(Boolean).join(" · ")}</small>}</span>
-                      <ChevronRight size={15} aria-hidden />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
       </section>
       </div>
       <AdditionalChecks check={check} version={version} onExcluded={openExcluded} onDiagnostic={openDiagnostic} onIndicator={(id) => {

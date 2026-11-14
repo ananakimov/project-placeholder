@@ -2,9 +2,11 @@ import type { Doc } from "@/data/mock";
 
 export function DocumentFields({ doc }: { doc: Doc | null }) {
   if (!doc) return null;
-  const values = ["Номер", "Дата", "Договор"].map(
-    (label) => doc.fields.find((field) => field.label === label)?.value ?? "—",
-  );
+  const values = [
+    ["Номер", doc.number],
+    ["Дата", doc.date],
+    ["Договор", doc.contract],
+  ].map(([label, value]) => doc.fields.find((field) => field.label === label)?.value ?? (value || "—"));
   return (
     <p
       aria-label="Реквизиты документа"

@@ -1,17 +1,8 @@
-import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUpRight,
-  ChevronRight,
-  FileSearch,
-  Files,
-  Plus,
-  Search,
-  SlidersHorizontal,
-} from "lucide-react";
+import { useState, type MouseEvent } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { FileSearch, Files, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DemoHistory } from "@/components/check/DemoHistory";
+import { demoJobName, DemoJobStatus, DemoJobTime } from "@/components/check/DemoHistory";
 import { Input } from "@/components/ui/input";
 import { type Check } from "@/data/mock";
 import { useChecks } from "@/context/ChecksContext";
@@ -25,7 +16,7 @@ export function countByStatus(c: Check) {
     unverified: rows.filter((r) => r.status === "unverified").length,
   };
 }
-const labels = { all: "Все проверки", discrepancy: "Есть расхождения", unverified: "Неполные данные", verified: "Без расхождений" };
+const labels = { all: "Все", discrepancy: "Есть расхождения", unverified: "Неполные данные", verified: "Без расхождений" };
 type Filter = keyof typeof labels;
 function CoverageBar({ c }: { c: Check["coverage"] }) {
   return (
@@ -42,203 +33,144 @@ function CoverageBar({ c }: { c: Check["coverage"] }) {
     </div>
   );
 }
+function matches(counts: ReturnType<typeof countByStatus>, filter: Filter) {
+  if (filter === "all") return true;
+  if (filter === "verified") return counts.verified > 0 && counts.discrepancy === 0 && counts.unverified === 0;
+  return counts[filter] > 0;
+}
+
+function checkTimestamp(check: Check) {
+  const [day, month, year] = check.date.split(".").map(Number);
+  return Date.UTC(year!, month! - 1, day!);
+}
+
 export function Checks({ checks: override }: { checks?: Check[] }) {
   const ctx = useChecks();
+  const navigate = useNavigate();
   const checks = override ?? ctx.checks;
+  const jobs = override ? [] : ctx.demoQueue.entries;
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [sort, setSort] = useState<"recent" | "name">("recent");
-  const results = useMemo(() => checks.map((check) => ({ check, counts: countByStatus(check) })), [checks]);
+  const results = checks.map((check) => ({ check, counts: countByStatus(check) }));
+  const allSynthetic = checks.length > 0 && checks.every((check) => check.synthetic);
+  const search = q.trim().toLocaleLowerCase("ru");
+  const entries = [
+    ...results.filter(({ check, counts }) => matches(counts, filter) &&
+      `${checkName(check)} ${check.title} ${check.contract}`.toLocaleLowerCase("ru").includes(search)
+    ).map((result) => ({ id: result.check.id, time: checkTimestamp(result.check), result })),
+    ...jobs.filter((job) => filter === "all" && demoJobName(job.id).toLocaleLowerCase("ru").includes(search))
+      .map((job) => ({ id: job.id, time: job.createdAt, job })),
+  ].sort((a, b) => b.time - a.time || a.id.localeCompare(b.id, "ru", { numeric: true }));
 
-  function matches(counts: ReturnType<typeof countByStatus>, value: Filter) {
-    if (value === "all") return true;
-    if (value === "verified") return counts.verified > 0 && counts.discrepancy === 0 && counts.unverified === 0;
-    return counts[value] > 0;
+  function openRow(event: MouseEvent<HTMLTableRowElement>, id: Check["id"]) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey ||
+      event.shiftKey || event.altKey || (event.target as HTMLElement).closest(
+        'a, button, input, select, textarea, label, [role="button"], [contenteditable="true"]',
+      )) return;
+    void navigate({ to: "/checks/$id", params: { id } });
   }
 
-  const search = q.trim().toLowerCase();
-  const filtered = results.filter(({ check, counts }) => matches(counts, filter) &&
-    `${checkName(check)} ${check.title} ${check.contract}`.toLowerCase().includes(search));
-  filtered.sort(({ check: a }, { check: b }) => sort === "name"
-    ? checkName(a).localeCompare(checkName(b), "ru", { numeric: true })
-    : b.date.split(".").reverse().join("").localeCompare(a.date.split(".").reverse().join("")),
-  );
   return (
     <div className="overview-page">
       <div className="page-heading">
         <div>
           <h1>Проверки</h1>
-          <p>
-            Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.
-          </p>
+          <p>Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.</p>
         </div>
-        <Button asChild className="new-check-button">
-          <Link to="/checks/new">
-            <Plus size={17} />
-            Новая проверка
-          </Link>
-        </Button>
       </div>
       <div className="checks-section">
         <div className="section-heading">
-          <h2>
-            Ваши проверки <span>{checks.length}</span>
-          </h2>
-          <div className="legend">
-            <i />
-            Подтверждено
-            <i />
-            Расхождения
-            <i />
-            Нет данных
-          </div>
+          <h2>Ваши проверки <span>{checks.length + jobs.length}</span></h2>
+          {allSynthetic && <span className="text-xs text-muted-foreground">Демо-режим · синтетические результаты</span>}
         </div>
         <div className="checks-toolbar">
           <div className="filter-tabs" aria-label="Фильтры проверок">
-            {(Object.keys(labels) as Filter[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                aria-pressed={filter === f}
-                className={cn(filter === f && "active")}
-              >
-                {labels[f]}
-                <span>
-                  {results.filter(({ counts }) => matches(counts, f)).length}
-                </span>
+            {(Object.keys(labels) as Filter[]).map((item) => (
+              <button key={item} type="button" onClick={() => setFilter(item)}
+                aria-pressed={filter === item} className={cn(filter === item && "active")}>
+                {labels[item]}
+                <span>{results.filter(({ counts }) => matches(counts, item)).length +
+                  (item === "all" ? jobs.length : 0)}</span>
               </button>
             ))}
           </div>
           <div className="toolbar-inputs">
             <div className="search-wrap">
-              <Search size={16} />
-              <Input
-                aria-label="Поиск проверок"
-                placeholder="Название или договор"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-              />
+              <Search size={16} aria-hidden="true" />
+              <Input aria-label="Поиск проверок" placeholder="Название или договор"
+                value={q} onChange={(event) => setQ(event.target.value)} />
             </div>
-            <button
-              className="sort-button"
-              onClick={() => setSort((s) => (s === "recent" ? "name" : "recent"))}
-              aria-label={sort === "recent" ? "Сортировать по названию" : "Сортировать по дате"}
-              title={sort === "recent" ? "По дате · изменить" : "По названию · изменить"}
-            >
-              <SlidersHorizontal size={17} />
-            </button>
           </div>
         </div>
         <div className="checks-table-wrap">
           <table className="checks-table">
             <thead>
               <tr>
-                <th>Проверка</th>
-                <th>Документы</th>
-                <th>Покрытие по сумме</th>
-                <th>Результат</th>
-                <th aria-sort={sort === "recent" ? "descending" : "none"}>
-                  <button onClick={() => setSort((s) => (s === "recent" ? "name" : "recent"))}>
-                    Дата <ArrowDown size={12} />
-                  </button>
-                </th>
-                <th aria-label="Открыть" />
+                <th scope="col">Проверка</th>
+                <th scope="col">Результат</th>
+                <th scope="col">Покрытие по сумме</th>
+                <th scope="col">Документы</th>
+                <th scope="col" aria-sort="descending">Дата</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map(({ check: c, counts: n }) => {
-                const good = matches(n, "verified");
-                const bad = n.discrepancy > 0;
+              {entries.map((entry) => {
+                if ("job" in entry) {
+                  const { job } = entry;
+                  return <tr key={`job:${job.id}`}>
+                    <td className="break-all font-medium">{demoJobName(job.id)}</td>
+                    <td><DemoJobStatus status={job.status} /></td>
+                    <td aria-label="Покрытие отсутствует">—</td>
+                    <td>{job.documents}</td>
+                    <td className="date-cell"><DemoJobTime createdAt={job.createdAt} /></td>
+                  </tr>;
+                }
+                const { check, counts } = entry.result;
+                const good = matches(counts, "verified");
+                const bad = counts.discrepancy > 0;
+                const status = good ? "Подтверждено" : bad ? "Есть расхождения" :
+                  counts.unverified > 0 ? "Неполные данные" : "Нет показателей";
+                const theme = good ? "mint" : bad ? "peach" : "lavender";
                 return (
-                  <tr key={c.id}>
+                  <tr key={check.id} className="check-result-row" onClick={(event) => openRow(event, check.id)}>
                     <td>
                       <div className="check-title-cell">
-                        <span
-                          className={cn("file-symbol", good ? "mint" : bad ? "peach" : "lavender")}
-                        >
-                          <FileSearch size={21} />
-                        </span>
+                        <span className={cn("file-symbol", theme)}><FileSearch size={21} aria-hidden="true" /></span>
                         <div>
-                          <Link to="/checks/$id" params={{ id: c.id }}>
-                            {checkName(c)}
-                            <ArrowUpRight size={13} />
-                          </Link>
-                          <small>Договор {c.contract}</small>
-                          <small className="period">{c.period.replace("–", " — ")}</small>
-                          {c.synthetic && <small>Синтетика</small>}
+                          <Link to="/checks/$id" params={{ id: check.id }}>{checkName(check)}</Link>
+                          <small>Договор {check.contract}</small>
+                          <small className="period">{check.period.replace("–", " — ")}</small>
+                          {!allSynthetic && check.synthetic && <small>Синтетика</small>}
                         </div>
                       </div>
                     </td>
+                    <td><span className={cn("result-chip", theme)}><i />{status}</span></td>
                     <td>
-                      <span className="document-count">
-                        <Files size={15} />
-                        {c.docs.length} файлов
-                      </span>
-                    </td>
-                    <td>
-                      <CoverageBar c={c.coverage} />
+                      <CoverageBar c={check.coverage} />
                       <small className="coverage-description">
-                        {n.verified} из {n.verified + n.discrepancy + n.unverified} показателей
+                        {counts.verified} из {counts.verified + counts.discrepancy + counts.unverified} показателей
                       </small>
                     </td>
-                    <td>
-                      <span
-                        className={cn("result-chip", good ? "mint" : bad ? "peach" : "lavender")}
-                      >
-                        <i />
-                        {good ? "Подтверждено" : bad ? "Есть расхождения" : n.unverified > 0 ? "Неполные данные" : "Нет показателей"}
-                      </span>
-                      <small className="result-detail">
-                        {c.state === "Подписано"
-                          ? "Заключение подписано"
-                          : bad
-                            ? `${n.discrepancy} расхожд. · ${n.unverified} не проверено`
-                            : good
-                              ? "Можно перейти к заключению"
-                              : n.unverified > 0 ? `${n.unverified} показателей без подтверждения` : ""}
-                      </small>
-                    </td>
-                    <td className="date-cell">{c.date}</td>
-                    <td>
-                      <Link
-                        to="/checks/$id"
-                        params={{ id: c.id }}
-                        className="row-open"
-                        aria-label={`Открыть ${checkName(c)}`}
-                      >
-                        <ChevronRight size={18} />
-                      </Link>
-                    </td>
+                    <td><span className="document-count"><Files size={15} aria-hidden="true" />{check.docs.length}</span></td>
+                    <td className="date-cell">{check.date}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
-          {!filtered.length && (
+          {entries.length === 0 && (
             <div className="empty-checks">
-              <FileSearch size={32} />
-              <h3>{checks.length ? "Проверки не найдены" : "Здесь появятся ваши проверки"}</h3>
-              {checks.length > 0 && <p>Попробуйте другой запрос или сбросьте фильтры.</p>}
-              {checks.length ? (
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setQ("");
-                    setFilter("all");
-                  }}
-                >
+              <FileSearch size={32} aria-hidden="true" />
+              <h3>{checks.length || jobs.length ? "Проверки не найдены" : "Здесь появятся ваши проверки"}</h3>
+              {(checks.length > 0 || jobs.length > 0) && (
+                <Button variant="outline" onClick={() => { setQ(""); setFilter("all"); }}>
                   Сбросить фильтры
-                </Button>
-              ) : (
-                <Button asChild>
-                  <Link to="/checks/new">Новая проверка</Link>
                 </Button>
               )}
             </div>
           )}
         </div>
       </div>
-      {filter === "all" && <DemoHistory search={q} />}
     </div>
   );
 }

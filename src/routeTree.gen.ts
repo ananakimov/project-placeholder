@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ArchiveRouteImport } from './routes/archive'
 import { Route as ChecksIndexRouteImport } from './routes/checks.index'
 import { Route as ChecksIdRouteImport } from './routes/checks.$id'
 import { Route as ChecksNewRouteImport } from './routes/checks.new'
@@ -21,6 +22,11 @@ import { Route as ChecksIdExceptionsRouteImport } from './routes/checks.$id.exce
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchiveRoute = ArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChecksIndexRoute = ChecksIndexRouteImport.update({
@@ -61,6 +67,7 @@ const ChecksIdExceptionsRoute = ChecksIdExceptionsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/checks/$id': typeof ChecksIdRouteWithChildren
   '/checks/new': typeof ChecksNewRoute
   '/checks/': typeof ChecksIndexRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/checks/new': typeof ChecksNewRoute
   '/checks': typeof ChecksIndexRoute
   '/checks/$id/conclusion': typeof ChecksIdConclusionRoute
@@ -81,6 +89,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/checks/$id': typeof ChecksIdRouteWithChildren
   '/checks/new': typeof ChecksNewRoute
   '/checks/': typeof ChecksIndexRoute
@@ -93,6 +102,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/archive'
     | '/checks/$id'
     | '/checks/new'
     | '/checks/'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/archive'
     | '/checks/new'
     | '/checks'
     | '/checks/$id/conclusion'
@@ -112,6 +123,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/archive'
     | '/checks/$id'
     | '/checks/new'
     | '/checks/'
@@ -123,6 +135,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArchiveRoute: typeof ArchiveRoute
   ChecksIdRoute: typeof ChecksIdRouteWithChildren
   ChecksNewRoute: typeof ChecksNewRoute
   ChecksIndexRoute: typeof ChecksIndexRoute
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/archive': {
+      id: '/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof ArchiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checks/': {
@@ -209,6 +229,7 @@ const ChecksIdRouteWithChildren = ChecksIdRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArchiveRoute: ArchiveRoute,
   ChecksIdRoute: ChecksIdRouteWithChildren,
   ChecksNewRoute: ChecksNewRoute,
   ChecksIndexRoute: ChecksIndexRoute,

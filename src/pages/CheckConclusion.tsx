@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AcceptCheck } from "@/components/check/AcceptCheck";
 import { Money } from "@/components/Money";
 import { countByStatus } from "@/pages/Checks";
 import type { Check } from "@/data/mock";
@@ -32,6 +33,7 @@ export function CheckConclusion({ check, children }: { check: Check; children?: 
         <div className="text-[13px] text-muted-foreground">Вывод по проверке</div>
         <h2 className={cn("conclusion-title", colors[check.conclusion])}>{check.conclusion}</h2>
         <p className="mt-1 text-sm">{recommendation}</p>
+        <AcceptCheck check={check} />
       </section>
       <section aria-labelledby="check-coverage-heading" className="rounded-lg border bg-card p-4 shadow-card" data-print-card>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">

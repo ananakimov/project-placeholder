@@ -2,6 +2,8 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { checks as baseChecks, type Check } from "@/data/mock";
 import { useDemoQueue, type DemoQueue } from "./demo-queue";
 
+import { useDemoCheckHistory, type DemoCheckHistory } from "./demo-check-history";
+
 export const CURRENT_USER = "Иванова А. С.";
 type Signature = { by: string; at: string } | null;
 type PerCheck<T> = Record<string, T>;
@@ -30,6 +32,7 @@ export function applyVariants(base: Check, applied: Record<string, string>): Che
 type Ctx = {
   checks: Check[];
   demoQueue: DemoQueue;
+  checkHistory: DemoCheckHistory;
   getCheck: (id: string) => Check | undefined;
   applied: PerCheck<Record<string, string>>;
   reviewed: PerCheck<Set<string>>;
@@ -49,6 +52,7 @@ const C = createContext<Ctx | null>(null);
 
 export function ChecksProvider({ children }: { children: ReactNode }) {
   const demoQueue = useDemoQueue();
+  const checkHistory = useDemoCheckHistory();
   const [applied, setApplied] = useState<PerCheck<Record<string, string>>>({});
   const [reviewed, setReviewed] = useState<PerCheck<Set<string>>>({});
   const [comments, setComments] = useState<Record<string, string>>({});
@@ -68,7 +72,7 @@ export function ChecksProvider({ children }: { children: ReactNode }) {
   );
 
   const value: Ctx = {
-    checks, demoQueue,
+    checks, demoQueue, checkHistory,
     getCheck: (id) => checks.find((c) => c.id === id),
     applied, reviewed, comments, flagged, signature,
     applyVariant: (checkId, rowId, key) => {

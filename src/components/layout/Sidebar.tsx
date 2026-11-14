@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { ClipboardList, Menu, Plus, ScanLine } from "lucide-react";
+import { Archive, ClipboardList, Menu, Plus, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
   { title: "Новая проверка", url: "/checks/new", icon: Plus },
   { title: "Проверки", url: "/checks", icon: ClipboardList },
+  { title: "Архив проверок", url: "/archive", icon: Archive },
 ] as const;
 
 export function Sidebar() {
@@ -27,7 +28,7 @@ export function Sidebar() {
         {items.map((item) => {
           const active = item.url === "/checks"
             ? /^\/checks\/?$/.test(path) || (path.startsWith("/checks/") && !/^\/checks\/new\/?$/.test(path))
-            : /^\/checks\/new\/?$/.test(path);
+            : path.replace(/\/$/, "") === item.url;
           return (
             <Link key={item.url} to={item.url} aria-label={item.title} aria-current={active ? "page" : undefined}
               activeOptions={{ exact: true }} className={cn("nav-item", active && "active")}

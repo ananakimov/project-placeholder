@@ -23,6 +23,7 @@ if (!existsSync(shell)) throw new Error("The GitHub Pages SPA shell was not gene
 const routes = [
   "checks",
   "checks/new",
+  "archive",
   "log",
   ...["a", "b", "c", "g"].flatMap((id) =>
     ["", "/documents", "/exceptions", "/conclusion", "/log"].map(

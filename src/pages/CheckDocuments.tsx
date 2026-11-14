@@ -17,21 +17,30 @@ import { SourceViewer } from "@/components/check/SourceViewer";
 import type { Check, Doc, SourceRef } from "@/data/mock";
 
 const PREFIX: Record<string, string> = { a: "А", b: "Б", c: "В", g: "g-" };
-const STATES: Doc["state"][] = [
-  "прочитан",
-  "дубль",
-  "вне периода",
-  "другой договор",
-  "не прочитан",
-];
+type DocumentFilter = "all" | "read" | "error";
+const STATE_LABELS: Record<Doc["state"], string> = {
+  "прочитан": "Прочитано",
+  "дубль": "Дубликат",
+  "вне периода": "Вне периода проверки",
+  "другой договор": "Другой договор",
+  "не прочитан": "Не удалось прочитать",
+};
 export function CheckDocuments({ check }: { check: Check }) {
-  const [f, setF] = useState<"all" | Doc["state"]>("all");
+  const [filter, setFilter] = useState<DocumentFilter>("all");
   const [open, setOpen] = useState<Doc | null>(null);
+  const readCount = check.docs.filter((d) => d.state === "прочитан").length;
+  const filters: { value: DocumentFilter; label: string; count: number }[] = [
+    { value: "all", label: "Все", count: check.docs.length },
+    { value: "read", label: "Прочитано", count: readCount },
+    { value: "error", label: "Ошибочные", count: check.docs.length - readCount },
+  ];
   const refs = (d: Doc) =>
     check.rows
       .filter((r) => r.sources.some((s) => s.docId === d.id))
       .map((r) => `${PREFIX[check.id]}${check.rows.indexOf(r) + 1}`);
-  const list = check.docs.filter((d) => f === "all" || d.state === f);
+  const list = check.docs.filter((d) =>
+    filter === "all" || (filter === "read" ? d.state === "прочитан" : d.state !== "прочитан"),
+  );
   const openRow = open
     ? (check.rows.find((r) => r.sources.some((s) => s.docId === open.id)) ?? check.rows[0])
     : undefined;
@@ -59,17 +68,14 @@ export function CheckDocuments({ check }: { check: Check }) {
         <ToggleGroup
           aria-labelledby="doc-filter"
           type="single"
-          value={f}
-          onValueChange={(v) => v && setF(v as typeof f)}
+          value={filter}
+          onValueChange={(v) => v && setFilter(v as DocumentFilter)}
           variant="outline"
           className="justify-start bg-card"
         >
-          <ToggleGroupItem value="all" className="px-3 text-[13px]">
-            Все ({check.docs.length})
-          </ToggleGroupItem>
-          {STATES.map((s) => (
-            <ToggleGroupItem key={s} value={s} className="px-3 text-[13px]">
-              {s} ({check.docs.filter((d) => d.state === s).length})
+          {filters.map((item) => (
+            <ToggleGroupItem key={item.value} value={item.value} className="px-3 text-[13px]">
+              {item.label} ({item.count})
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
@@ -123,7 +129,7 @@ export function CheckDocuments({ check }: { check: Check }) {
                           ? "discrepancy"
                           : "unverified"
                     }
-                    label={d.state}
+                    label={STATE_LABELS[d.state]}
                   />
                 </TableCell>
                 <TableCell className="tabular-nums text-muted-foreground">

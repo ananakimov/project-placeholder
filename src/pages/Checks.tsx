@@ -44,11 +44,15 @@ function checkTimestamp(check: Check) {
   return Date.UTC(year!, month! - 1, day!);
 }
 
-export function Checks({ checks: override }: { checks?: Check[] }) {
+export function Checks({ checks: override, archive = false }: { checks?: Check[]; archive?: boolean }) {
   const ctx = useChecks();
   const navigate = useNavigate();
-  const checks = override ?? ctx.checks;
-  const jobs = override ? [] : ctx.demoQueue.entries;
+  const allChecks = override ?? ctx.checks;
+  const [acceptedFilter, setAcceptedFilter] = useState(false);
+  const showAccepted = archive || acceptedFilter;
+  const checks = allChecks.filter((check) => (ctx.checkHistory.current(check).acceptedAt !== null) === showAccepted);
+  const jobs = override || showAccepted ? [] : ctx.demoQueue.entries;
+  const acceptedCount = allChecks.filter((check) => ctx.checkHistory.current(check).acceptedAt !== null).length;
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const results = checks.map((check) => ({ check, counts: countByStatus(check) }));
@@ -74,25 +78,29 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
     <div className="overview-page">
       <div className="page-heading">
         <div>
-          <h1>Проверки</h1>
-          <p>Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.</p>
+          <h1>{archive ? "Архив проверок" : "Проверки"}</h1>
+          <p>{archive ? "Принятые проверки и их документы." : "Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания."}</p>
         </div>
       </div>
       <div className="checks-section">
         <div className="section-heading">
-          <h2>Ваши проверки <span>{checks.length + jobs.length}</span></h2>
+          <h2>{showAccepted ? "Принятые проверки" : "Ваши проверки"} <span>{checks.length + jobs.length}</span></h2>
           {allSynthetic && <span className="text-xs text-muted-foreground">Демо-режим · синтетические результаты</span>}
         </div>
         <div className="checks-toolbar">
           <div className="filter-tabs" aria-label="Фильтры проверок">
-            {(Object.keys(labels) as Filter[]).map((item) => (
-              <button key={item} type="button" onClick={() => setFilter(item)}
-                aria-pressed={filter === item} className={cn(filter === item && "active")}>
+            {!archive && (Object.keys(labels) as Filter[]).map((item) => (
+              <button key={item} type="button" onClick={() => { setAcceptedFilter(false); setFilter(item); }}
+                aria-pressed={!showAccepted && filter === item} className={cn(!showAccepted && filter === item && "active")}>
                 {labels[item]}
-                <span>{results.filter(({ counts }) => matches(counts, item)).length +
-                  (item === "all" ? jobs.length : 0)}</span>
+                <span>{allChecks.filter((check) => ctx.checkHistory.current(check).acceptedAt === null && matches(countByStatus(check), item)).length +
+                  (item === "all" && !override ? ctx.demoQueue.entries.length : 0)}</span>
               </button>
             ))}
+            {!archive && <button type="button" className={cn(showAccepted && "active")} aria-pressed={showAccepted}
+              onClick={() => { setAcceptedFilter(true); setFilter("all"); }}>
+              Приняты<span>{acceptedCount}</span>
+            </button>}
           </div>
           <div className="toolbar-inputs">
             <div className="search-wrap">
@@ -161,7 +169,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
           {entries.length === 0 && (
             <div className="empty-checks">
               <FileSearch size={32} aria-hidden="true" />
-              <h3>{checks.length || jobs.length ? "Проверки не найдены" : "Здесь появятся ваши проверки"}</h3>
+              <h3>{checks.length || jobs.length ? "Проверки не найдены" : showAccepted ? "Принятых проверок пока нет" : "Здесь появятся ваши проверки"}</h3>
               {(checks.length > 0 || jobs.length > 0) && (
                 <Button variant="outline" onClick={() => { setQ(""); setFilter("all"); }}>
                   Сбросить фильтры

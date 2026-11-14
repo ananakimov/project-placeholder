@@ -3,21 +3,19 @@ import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUpRight,
-  CheckCircle2,
   ChevronRight,
-  ClipboardList,
   FileSearch,
   Files,
   Plus,
   Search,
   SlidersHorizontal,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { type Check } from "@/data/mock";
 import { useChecks } from "@/context/ChecksContext";
 import { cn } from "@/lib/utils";
+import { checkName } from "@/lib/check-name";
 export function countByStatus(c: Check) {
   const rows = c.rows.filter((r) => !r.service);
   return {
@@ -56,7 +54,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
         .filter(
           (c) =>
             (!q.trim() ||
-              `${c.title} ${c.contract}`.toLowerCase().includes(q.trim().toLowerCase())) &&
+              `${checkName(c)} ${c.title} ${c.contract}`.toLowerCase().includes(q.trim().toLowerCase())) &&
             (filter === "all" ||
               (filter === "verified"
                 ? c.conclusion === "Достоверен"
@@ -64,7 +62,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
         )
         .sort((a, b) =>
           sort === "name"
-            ? a.title.localeCompare(b.title, "ru")
+            ? checkName(a).localeCompare(checkName(b), "ru", { numeric: true })
             : b.date
                 .split(".")
                 .reverse()
@@ -73,7 +71,6 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
         ),
     [checks, q, filter, sort],
   );
-  const documents = checks.reduce((s, c) => s + c.docs.length, 0);
   const verified = checks.filter((c) => c.conclusion === "Достоверен").length;
   return (
     <div className="overview-page">
@@ -90,52 +87,6 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
             Новая проверка
           </Link>
         </Button>
-      </div>
-      <div className="overview-stats">
-        <button
-          onClick={() => setFilter("all")}
-          className={cn("stat-card", filter === "all" && "stat-active")}
-        >
-          <span>
-            Всего проверок
-            <ClipboardList size={18} />
-          </span>
-          <strong>{checks.length.toString().padStart(2, "0")}</strong>
-          <small>В рабочем пространстве</small>
-        </button>
-        <button
-          onClick={() => setFilter("attention")}
-          className={cn("stat-card stat-peach", filter === "attention" && "stat-active")}
-        >
-          <span>
-            Требуют внимания
-            <AlertCircle size={18} />
-          </span>
-          <strong>
-            {attention.length.toString().padStart(2, "0")}
-            <ArrowUpRight size={22} />
-          </strong>
-          <small>Расхождения или неполные данные</small>
-        </button>
-        <button
-          onClick={() => setFilter("verified")}
-          className={cn("stat-card stat-mint", filter === "verified" && "stat-active")}
-        >
-          <span>
-            Без расхождений
-            <CheckCircle2 size={18} />
-          </span>
-          <strong>{verified.toString().padStart(2, "0")}</strong>
-          <small>Все суммы подтверждены</small>
-        </button>
-        <div className="stat-card stat-neutral">
-          <span>
-            Документов
-            <Files size={18} />
-          </span>
-          <strong>{documents}</strong>
-          <small>В составе всех проверок</small>
-        </div>
       </div>
       <div className="checks-section">
         <div className="section-heading">
@@ -219,11 +170,12 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                         </span>
                         <div>
                           <Link to="/checks/$id" params={{ id: c.id }}>
-                            {c.title.split(",")[0]}
+                            {checkName(c)}
                             <ArrowUpRight size={13} />
                           </Link>
                           <small>Договор {c.contract}</small>
                           <small className="period">{c.period.replace("–", " — ")}</small>
+                          {c.synthetic && <small>Синтетика</small>}
                         </div>
                       </div>
                     </td>
@@ -262,7 +214,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                         to="/checks/$id"
                         params={{ id: c.id }}
                         className="row-open"
-                        aria-label={`Открыть ${c.title}`}
+                        aria-label={`Открыть ${checkName(c)}`}
                       >
                         <ChevronRight size={18} />
                       </Link>
@@ -276,11 +228,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
             <div className="empty-checks">
               <FileSearch size={32} />
               <h3>{checks.length ? "Проверки не найдены" : "Здесь появятся ваши проверки"}</h3>
-              <p>
-                {checks.length
-                  ? "Попробуйте другой запрос или сбросьте фильтры."
-                  : "Добавьте отчёт КФЗ и первичные документы."}
-              </p>
+              {checks.length > 0 && <p>Попробуйте другой запрос или сбросьте фильтры.</p>}
               {checks.length ? (
                 <Button
                   variant="outline"
@@ -298,11 +246,6 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
               )}
             </div>
           )}
-        </div>
-        <div className="table-footer">
-          <span>
-            Показано {filtered.length} из {checks.length} проверок
-          </span>
         </div>
       </div>
     </div>

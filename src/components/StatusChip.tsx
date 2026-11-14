@@ -5,13 +5,13 @@ const states = {
   discrepancy: { Icon: AlertTriangle, label: "Расхождение" },
   unverified: { Icon: Minus, label: "Не проверено" },
 };
-export function StatusLabel({ status, label }: { status: Status; label: string }) {
+export function StatusLabel({ status, label, plain = false }: { status: Status; label: string; plain?: boolean }) {
   const { Icon } = states[status];
   return (
     <span className="status-chip" data-status={status}>
-      <span className="status-symbol">
+      {(!plain || status !== "unverified") && <span className={plain ? "inline-flex shrink-0" : "status-symbol"}>
         <Icon size={14} strokeWidth={2} aria-hidden="true" />
-      </span>
+      </span>}
       {label}
     </span>
   );

@@ -62,7 +62,7 @@ export function NewCheck() {
   return (
     <div className="upload-page">
       <h1>Новая проверка</h1>
-      <p className="upload-intro">Добавьте отчёт и подтверждающие документы для сверки.</p>
+      <p className="upload-intro">Добавьте КФЗ и первичные документы.</p>
       <div className="mt-6 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         <UploadBlock group="report" files={report} error={errors.report} onFiles={takeFiles} onRemove={() => setReport([])} />
         <UploadBlock group="docs" files={docs} error={errors.docs} onFiles={takeFiles} onRemove={(index) => setDocs((previous) => previous.filter((_, i) => i !== index))} />
@@ -70,7 +70,6 @@ export function NewCheck() {
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Button disabled={!canStart} onClick={() => canStart && setRun(0)}>Запустить проверку <ArrowRight size={17} /></Button>
         <Button variant="outline" onClick={sample}>Загрузить пример</Button>
-        {!canStart && <span className="text-[13px] text-muted-foreground">Добавьте КФЗ и первичные документы</span>}
       </div>
     </div>
   );

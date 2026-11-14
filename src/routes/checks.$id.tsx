@@ -1,3 +1,4 @@
+import { checkName } from "@/lib/check-name";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { CheckHeader } from "@/components/check/CheckHeader";
 import { getCheck } from "@/data/mock";
@@ -5,7 +6,7 @@ import { useChecks } from "@/context/ChecksContext";
 
 export const Route = createFileRoute("/checks/$id")({
   head: ({ params }) => {
-    const t = getCheck(params.id)?.title ?? "Проверка не найдена";
+    const t = checkName(getCheck(params.id));
     return { meta: [{ title: `${t} — DocCheck` }, { name: "description", content: `DocCheck: ${t}` }, { property: "og:title", content: `${t} — DocCheck` }, { property: "og:description", content: `DocCheck: ${t}` }] };
   },
   component: CheckLayout,

@@ -90,7 +90,8 @@ describe("Attached synthetic 2027 sample", () => {
   });
   it("renders the 2027 heading and opens nested values without adding independent indicators", () => {
     render(<ChecksProvider><CheckHeader check={g} /><CheckDetail check={g} /></ChecksProvider>);
-    expect(screen.getByRole("heading", { name: "КФЗ № 3/7 · 3 этап, 2027 г." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "КФЗ №3/7" })).toBeInTheDocument();
+    expect(screen.getByText("3 этап, 2027 г.")).toBeInTheDocument();
     const table = screen.getByRole("table", { name: "Показатели КФЗ" });
     expect(within(table).getAllByRole("row")).toHaveLength(8);
     const payroll = g.rows.find((row) => row.id === "g-1")!;

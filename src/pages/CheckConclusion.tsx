@@ -1,15 +1,7 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Copy, FileWarning, PenLine } from "lucide-react";
+import type { ReactNode } from "react";
+import { FileWarning } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -21,7 +13,7 @@ import {
 import { Money } from "@/components/Money";
 import { useChecks } from "@/context/ChecksContext";
 import { countByStatus } from "@/pages/Checks";
-import { CONCLUSION_SUMMARY, EXPLANATION_DRAFTS, PROBLEMS, REQUEST_DRAFTS } from "@/data/problems";
+import { CONCLUSION_SUMMARY, PROBLEMS } from "@/data/problems";
 import type { Check } from "@/data/mock";
 import { cn } from "@/lib/utils";
 
@@ -35,17 +27,14 @@ const pctLabel = (p: string) => `${p.replace(".", ",")}%`;
 function Card({
   title,
   children,
-  extra,
 }: {
   title: string;
-  children: React.ReactNode;
-  extra?: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section data-print-card className="rounded-lg border bg-card p-5 shadow-card">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-[15px] font-medium">{title}</h2>
-        {extra}
       </div>
       {children}
     </section>
@@ -55,12 +44,6 @@ function Card({
 export function CheckConclusion({ check, onProblemSelect, children }: { check: Check; onProblemSelect?: (rowId: string) => void; children?: ReactNode }) {
   const store = useChecks();
   const signature = store.signature[check.id] ?? null;
-  const [text, setText] = useState(store.explanations[check.id] ?? "");
-  const [reqOpen, setReqOpen] = useState(false);
-  useEffect(() => {
-    store.setExplanation(check.id, text);
-  }, [text]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const n = countByStatus(check);
   const total = n.verified + n.discrepancy + n.unverified;
   const cov = check.coverage;
@@ -71,7 +54,7 @@ export function CheckConclusion({ check, onProblemSelect, children }: { check: C
       (r) => r && (r.status === "discrepancy" || r.status === "unverified") && !reviewed.has(r.id),
     ).length;
   const problems = PROBLEMS[check.id] ?? [];
-  const request = REQUEST_DRAFTS[check.id];
+  const unverified = check.rows.filter((row) => !row.service && row.status === "unverified");
 
   const sign = () => {
     store.sign(check.id);
@@ -207,62 +190,29 @@ export function CheckConclusion({ check, onProblemSelect, children }: { check: C
               </div>
             ))
           )}
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Таблица отражает результат автоматической проверки
-          </p>
         </Card>
       </div>
 
       </section>
       {children}
 
-      <Card
-        title="Недостающие документы"
-        extra={
-          request && (
-            <Button size="sm" variant="outline" onClick={() => setReqOpen(true)} data-print-hide>
-              Черновик запроса
-            </Button>
-          )
-        }
-      >
-        {check.missing.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Недостающих документов нет</p>
-        ) : (
-          <ul className="space-y-1.5 text-[13px]">
-            {check.missing.map((m) => (
-              <li key={m} className="flex items-center gap-2">
-                <FileWarning className="h-4 w-4 text-unverified" /> {m}
+      {unverified.length > 0 && (
+        <Card title="Недостаточно подтверждений">
+          <p className="mb-3 text-sm text-muted-foreground">Недостаточно данных для проверки</p>
+          <ul className="space-y-3 text-[13px]">
+            {unverified.map((row) => (
+              <li key={row.id} className="flex items-start gap-2">
+                <FileWarning className="mt-0.5 h-4 w-4 shrink-0 text-unverified" aria-hidden="true" />
+                <div>
+                  <div className="font-medium">{row.name}</div>
+                  <p className="text-muted-foreground">{row.reason}</p>
+                  {row.partialNote && <p className="text-muted-foreground">{row.partialNote}</p>}
+                </div>
               </li>
             ))}
           </ul>
-        )}
-      </Card>
-
-      <Card
-        title="Пояснение бухгалтера"
-        extra={
-          !signature && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setText(EXPLANATION_DRAFTS[check.id] ?? "")}
-              data-print-hide
-            >
-              <PenLine className="h-3.5 w-3.5" /> Черновик пояснения
-            </Button>
-          )
-        }
-      >
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={4}
-          disabled={!!signature}
-          placeholder="Опишите основания вывода"
-          aria-label="Пояснение бухгалтера"
-        />
-      </Card>
+        </Card>
+      )}
 
       <section data-print-card className="flex items-center gap-4">
         {signature ? (
@@ -283,28 +233,6 @@ export function CheckConclusion({ check, onProblemSelect, children }: { check: C
         )}
       </section>
 
-      <Dialog open={reqOpen} onOpenChange={setReqOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Черновик запроса
-            </DialogTitle>
-          </DialogHeader>
-          <p className="rounded-md border border-ai/20 bg-ai-bg p-3 text-[13px] leading-relaxed">
-            {request}
-          </p>
-          <DialogFooter>
-            <Button
-              onClick={async () => {
-                await navigator.clipboard?.writeText(request ?? "").catch(() => {});
-                toast("Текст скопирован");
-              }}
-            >
-              <Copy className="h-4 w-4" /> Копировать
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

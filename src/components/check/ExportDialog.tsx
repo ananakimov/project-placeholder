@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Check } from "@/data/mock";
 import { checkToJson, downloadBlob } from "@/lib/export";
+import { checkName } from "@/lib/check-name";
 
 export function ExportDialog({
   check,
@@ -49,7 +50,7 @@ export function ExportDialog({
       <DialogContent className="max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Экспорт</DialogTitle>
-          <DialogDescription>{check.title}</DialogDescription>
+          <DialogDescription>{checkName(check)}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
           {options.map((o) => (

@@ -20,20 +20,26 @@ export function recheckDemo(previous: Check, docs: readonly Doc[]): Check {
   const hasUnprocessedFiles = docs.some((doc) => doc.demoUpload);
   const exclusions = previous.excluded.filter((doc) => retained.has(doc.docId));
   const changedExclusions = previous.excluded.filter((doc) => !retained.has(doc.docId));
-  const sourceChanged = previous.rows.some((row) => row.sources.some((source) => !retained.has(source.docId)));
+  const evidenceChanged = (row: Row) => row.sources.some((source) => !retained.has(source.docId)) ||
+    row.evidenceDependencies?.some((id) => !retained.has(id));
+  const sourceChanged = previous.rows.some(evidenceChanged);
   const rows = previous.rows.map((row): Row => {
     const sources = row.sources.filter((source) => retained.has(source.docId));
-    if (sources.length === row.sources.length && !(row.service && sourceChanged)) {
+    const changedDocument = evidenceChanged(row);
+    const changedTotal = row.service && row.ruleId === "R-COV-01" && (sourceChanged || hasUnprocessedFiles);
+    if (!changedDocument && !changedTotal) {
       if (row.status === "verified" && changedExclusions.some((doc) => doc.rowIds?.includes(row.id))) {
         return { ...row, reason: "Сохранённые подтверждающие документы соответствуют сумме показателя." };
       }
       return row;
     }
 
-    const { causes, recommendation, partialNote, ...other } = row;
+    const { causes, recommendation, partialNote, evidenceDependencies, ...other } = row;
     return {
       ...other,
       sources,
+      ...(evidenceDependencies && { evidenceDependencies: evidenceDependencies.filter((id) => retained.has(id)) }),
+      category: null,
       expected: null,
       delta: null,
       status: "unverified",

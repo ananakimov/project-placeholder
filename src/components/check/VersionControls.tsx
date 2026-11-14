@@ -27,7 +27,7 @@ export function VersionControls({ check, selected }: { check: Check; selected: D
           {versions.map((version) => (
             <option key={version.number} value={version.number} disabled={version === pending}>
               {version.number} · {version.number === 1 ? dateOnly.format(version.createdAt) : dateTime.format(version.createdAt)}
-              {version === current ? " · текущая" : ""}
+              {version.number === current.number ? " · текущая" : ""}
               {version.acceptedAt !== null ? " · принята" : ""}
               {version === pending ? " · в работе" : ""}
             </option>

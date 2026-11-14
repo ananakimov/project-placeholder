@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { AcceptCheck } from "@/components/check/AcceptCheck";
 import { VersionControls } from "@/components/check/VersionControls";
 import { ChecksProvider, useChecks } from "@/context/ChecksContext";
+import { recheckDemo } from "@/data/demo-recheck";
 import { getCheck } from "@/data/mock";
 import { Checks } from "@/pages/Checks";
 
@@ -37,6 +38,29 @@ afterEach(() => {
 });
 
 describe("Versioned demo package", () => {
+  it("drops findings that rely on an excluded duplicate and keeps arithmetic on the unchanged report", () => {
+    const check = getCheck("b")!;
+    const revised = recheckDemo(check, check.docs.filter((doc) => doc.id !== "b-sp27-copy"));
+    expect(revised.rows.find((row) => row.id === "b-4"))
+      .toMatchObject({ status: "unverified", category: null, expected: null, delta: null });
+    expect(revised.rows.find((row) => row.ruleId === "R-ARI-01"))
+      .toEqual(check.rows.find((row) => row.ruleId === "R-ARI-01"));
+    expect(revised.rows.find((row) => row.id === "b-13")).toMatchObject({ status: "unverified" });
+  });
+
+  it("shows incomplete coverage of new files even when the previously confirmed indicators remain confirmed", () => {
+    const check = getCheck("a")!;
+    const result = recheckDemo(check, [...check.docs, {
+      id: "new-file", demoUpload: true, title: "Акт.pdf", type: "PDF", number: "", date: "", contract: "",
+      pages: 0, state: "не прочитан", fields: [],
+    }]);
+    expect(result.rows.filter((row) => !row.service && !row.nested).every((row) => row.status === "verified")).toBe(true);
+    render(<ChecksProvider><Checks checks={[result]} /></ChecksProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Неполные данные 1" }));
+    expect(screen.getByRole("cell", { name: "Неполные данные" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Без расхождений 0" }));
+    expect(screen.getByText("Проверки не найдены")).toBeInTheDocument();
+  });
   it("keeps the accepted snapshot and opens a new unaccepted version after processing", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-11-14T12:00:00Z"));
@@ -58,6 +82,10 @@ describe("Versioned demo package", () => {
 
     expect(screen.getByText(/Версия 2 в обработке/)).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Версия" })).toHaveValue("1");
+    const pending = screen.getByRole("row", { name: /КФЗ №3\/7 · Версия 2/ });
+    expect(within(pending).getByText("Обрабатывается")).toBeInTheDocument();
+    expect(within(pending).getByRole("link", { name: "Предыдущая версия" })).toHaveAttribute("href", "/checks/g?version=1");
+    expect(screen.queryByRole("link", { name: "КФЗ №3/7" })).not.toBeInTheDocument();
     const previous = JSON.parse(screen.getByTestId("current").textContent!);
     expect(previous.result).toEqual(base);
     expect(previous.acceptedAt).not.toBeNull();

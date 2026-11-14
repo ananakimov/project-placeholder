@@ -23,7 +23,9 @@ export function EditPackage({ docs, disabled, submit }: {
 
   function choose(actionType: FileAction) {
     action.current = actionType;
-    input.current?.click();
+    if (!input.current) return;
+    input.current.multiple = actionType.mode === "add";
+    input.current.click();
   }
 
   function addFiles(files: FileList | null) {
@@ -55,7 +57,7 @@ export function EditPackage({ docs, disabled, submit }: {
           Демо-проверка использует сохранённые данные примера. Для добавленных файлов сохраняются названия и тип.
           Распознавание новых файлов и кеш OCR требуют серверной обработки.
         </DialogDescription>
-        <input ref={input} type="file" aria-label="Файлы комплекта" hidden multiple accept=".pdf,.png,.docx,.xlsx,.xls"
+        <input ref={input} type="file" aria-label="Файлы комплекта" hidden accept=".pdf,.png,.docx,.xlsx,.xls"
           onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} />
         <ul aria-label="Состав комплекта" className="max-h-[45dvh] divide-y overflow-y-auto rounded-md border">
           {draft.map((doc) => (

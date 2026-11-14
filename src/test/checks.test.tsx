@@ -7,11 +7,13 @@ import { ChecksProvider } from "@/context/ChecksContext";
 import { checks } from "@/data/mock";
 import { checkName } from "@/lib/check-name";
 
+const navigate = vi.hoisted(() => vi.fn());
 vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => navigate,
   Link: ({ to, params, children, "aria-label": label }: { to: string; params?: { id: string }; children: ReactNode; "aria-label"?: string }) =>
     <a href={to.replace("$id", params?.id ?? "")} aria-label={label}>{children}</a>,
 }));
-afterEach(cleanup);
+afterEach(() => { cleanup(); localStorage.clear(); navigate.mockClear(); });
 function setup() { render(<ChecksProvider><Checks /></ChecksProvider>); }
 function resultLinks() {
   return within(screen.getByRole("table")).getAllByRole("link", { name: /^(КФЗ №|Проверка КФЗ №)/ });
@@ -36,14 +38,14 @@ describe("Check names", () => {
 });
 
 describe("Checks list", () => {
-  it("keeps creation and result links, provenance, conclusions and dates without overview cards", () => {
+  it("keeps result links, provenance, conclusions and dates without overview cards", () => {
     setup();
     expect(screen.getByRole("heading", { name: "Проверки", level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Новая проверка" })).toHaveAttribute("href", "/checks/new");
     expect(screen.getByText("Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.")).toBeInTheDocument();
     expect(resultLinks().map((link) => link.textContent)).toEqual(["Проверка КФЗ №c", "КФЗ №3/7", "Проверка КФЗ №a", "Проверка КФЗ №b"]);
     expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/c", "/checks/g", "/checks/a", "/checks/b"]);
-    expect(screen.getAllByText("Синтетика")).toHaveLength(4);
+    expect(screen.getByText("Демо-режим · синтетические результаты")).toBeInTheDocument();
+    expect(screen.queryByText("Синтетика")).not.toBeInTheDocument();
     expect(screen.getByText("Подтверждено", { exact: true })).toBeInTheDocument();
     expect(within(screen.getByRole("table")).getAllByText("Есть расхождения", { exact: true })).toHaveLength(2);
     expect(within(screen.getByRole("table")).getByText("Неполные данные", { exact: true })).toBeInTheDocument();
@@ -69,17 +71,30 @@ describe("Checks list", () => {
     expect(screen.getByText("Проверки не найдены")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
     expect(search).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Все проверки 4" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Все 4" })).toHaveAttribute("aria-pressed", "true");
     expect(resultLinks()).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "Без расхождений 1" }));
     expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/a"]);
   });
 
-  it("sorts by displayed names and switches back to check dates", () => {
+  it("opens the row while leaving the native link available for keyboard navigation", () => {
     setup();
-    fireEvent.click(screen.getByRole("button", { name: "Сортировать по названию" }));
-    expect(resultLinks().map((link) => link.textContent)).toEqual(["КФЗ №3/7", "Проверка КФЗ №a", "Проверка КФЗ №b", "Проверка КФЗ №c"]);
-    fireEvent.click(screen.getByRole("button", { name: "Сортировать по дате" }));
-    expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/c", "/checks/g", "/checks/a", "/checks/b"]);
+    const link = screen.getByRole("link", { name: "КФЗ №3/7" });
+    fireEvent.click(within(link.closest("tr")!).getByText("13.11.2026"));
+    expect(navigate).toHaveBeenCalledExactlyOnceWith({ to: "/checks/$id", params: { id: "g" } });
+    expect(link).toHaveAttribute("href", "/checks/g");
+  });
+
+  it("shows the newest demo assignments above results and omits them from financial filters", () => {
+    localStorage.setItem("doccheck.demo-queue.v1", JSON.stringify([
+      { id: "older", createdAt: 1_800_000_000_000, startsAt: 1_800_000_000_000, documents: 1 },
+      { id: "newer", createdAt: 1_800_000_000_001, startsAt: 1_800_000_005_000, documents: 2 },
+    ]));
+    setup();
+    expect(screen.getByRole("button", { name: "Все 6" })).toBeInTheDocument();
+    expect(screen.getAllByRole("row")[1]).toHaveTextContent("Демо-задание №newer");
+    expect(screen.getAllByRole("row")[2]).toHaveTextContent("Демо-задание №older");
+    fireEvent.click(screen.getByRole("button", { name: "Есть расхождения 2" }));
+    expect(screen.queryByText("Демо-задание №newer")).not.toBeInTheDocument();
   });
 });

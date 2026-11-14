@@ -63,10 +63,14 @@ function SelectedPanel({
   }
   const hasExplanation = row.status !== "verified";
   return (
-    <Tabs value={tab === "why" && !hasExplanation ? "source" : tab} onValueChange={(v) => onTab(v as PanelTab)} className="evidence-panel">
+    <Tabs
+      value={tab === "why" && !hasExplanation ? "source" : tab}
+      onValueChange={(v) => onTab(v as PanelTab)}
+      className="evidence-panel"
+    >
       <div className="evidence-header">
         <div className="evidence-heading">
-          <h2>{row.name}</h2>
+          <h2 title={row.name}>{row.name}</h2>
           <StatusChip status={row.status} />
         </div>
         <div className="evidence-amounts">
@@ -137,19 +141,20 @@ function SelectedPanel({
               </button>
             </div>
           )}
-          <TabsContent
-            value={String(index)}
-            className="source-document-content"
-          >
-            {row.sources.length > 1 && (
-              <div className="aggregation-note">
-                <span>Сумма показателя собрана из {row.sources.length} документов.</span>
-                <span>
-                  Документ {index + 1} / {row.sources.length}
-                </span>
-              </div>
-            )}
-            <DocumentFields doc={doc} />
+          <TabsContent value={String(index)} className="source-document-content">
+            <div className="source-context">
+              {row.sources.length > 1 && (
+                <div className="aggregation-note">
+                  <span className="aggregation-description">
+                    Сумма показателя собрана из {row.sources.length} документов.
+                  </span>
+                  <span>
+                    Документ {index + 1} / {row.sources.length}
+                  </span>
+                </div>
+              )}
+              <DocumentFields doc={doc} />
+            </div>
             <SourceViewer row={row} source={source} doc={doc} onWhy={() => onTab("why")} />
           </TabsContent>
         </Tabs>

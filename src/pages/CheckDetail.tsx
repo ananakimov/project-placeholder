@@ -162,13 +162,13 @@ function Reconciliation({ check }: { check: CheckData }) {
       </section>
       {check.excluded.length > 0 && <details className="excluded-disclosure"><summary>Исключённые документы <span>{check.excluded.length}</span><ChevronRight size={16} /></summary><ExcludedDocs check={check} /></details>}
       <Sheet open={panelOpen && !!selected} onOpenChange={setPanelOpen}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 !p-0 sm:max-w-[800px]" onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
-          <div className="border-b p-4 pr-12">
+        <SheetContent side="right" className="source-sheet flex w-full flex-col gap-0 !p-0 sm:max-w-[800px]" onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus(); }}>
+          <div className="source-sheet-header">
             <SheetTitle>Источник документа</SheetTitle>
             <SheetDescription className="sr-only">Документ и подсветка выбранного значения</SheetDescription>
-            <SheetClose asChild><Button variant="ghost" size="sm">Вернуться к таблице</Button></SheetClose>
+            <SheetClose asChild><Button variant="ghost" size="sm" aria-label="Вернуться к таблице">К таблице</Button></SheetClose>
           </div>
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-hidden">
             <SidePanel check={check} row={selected} sourceIndex={selection.sourceIndex} onSourceChange={(sourceIndex) => setSelection((previous) => ({ ...previous, sourceIndex }))} tab={tab} onTab={setTab} />
           </div>
         </SheetContent>

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Check, Row, SourceRef } from "@/data/mock";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentFields } from "./DocumentFields";
 import { SourceViewer } from "./SourceViewer";
 
@@ -23,10 +23,10 @@ export function SidePanel({ check, row, sources, sourceIndex, onSourceChange }: 
   }, [sourceIndex, sources]);
 
   return (
-    <div className="source-tabs">
+    <Tabs value={String(sourceIndex)} onValueChange={(value) => onSourceChange(Number(value))} className="source-tabs">
       <h3 className="source-document-title" title={doc?.title}>{doc?.title ?? "Источник документа"}</h3>
+      <p className="source-indicator-name" title={row.name}>{row.name}</p>
       {sources.length > 1 && (
-        <Tabs value={String(sourceIndex)} onValueChange={(value) => onSourceChange(Number(value))}>
           <div className="document-picker">
             <button type="button" aria-label="Предыдущий документ" disabled={sourceIndex === 0}
               onClick={() => onSourceChange(sourceIndex - 1)}><ChevronLeft size={16} /></button>
@@ -42,7 +42,6 @@ export function SidePanel({ check, row, sources, sourceIndex, onSourceChange }: 
             <button type="button" aria-label="Следующий документ" disabled={sourceIndex >= sources.length - 1}
               onClick={() => onSourceChange(sourceIndex + 1)}><ChevronRight size={16} /></button>
           </div>
-        </Tabs>
       )}
       <div className="source-context">
         <DocumentFields doc={doc} />
@@ -50,9 +49,9 @@ export function SidePanel({ check, row, sources, sourceIndex, onSourceChange }: 
           {sourceIndex + 1} / {sources.length}
         </small>}
       </div>
-      <div className="source-document-content">
+      <TabsContent value={String(sourceIndex)} className="source-document-content">
         <SourceViewer row={row} source={source} doc={doc} />
-      </div>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

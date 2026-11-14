@@ -3321,6 +3321,15 @@ kbd {
   font-weight: 500;
   border-bottom: 1px solid var(--ui-line);
 }
+.source-indicator-name {
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 3px 12px;
+  color: var(--ui-secondary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 @media (max-width: 900px) {
   .source-workspace[data-source-open="true"] {
     grid-template-columns: minmax(0, 1fr) 38px minmax(0, 47%);

@@ -1,4 +1,5 @@
 import { FileWarning } from "lucide-react";
+import { checkLocation } from "@/lib/check-location";
 import { Link } from "@tanstack/react-router";
 import type { Check, ExcludedDoc } from "@/data/mock";
 import { ExcludedDocs } from "./ExcludedDocs";
@@ -54,7 +55,7 @@ export function AdditionalChecks({ check, onIndicator, onExcluded, onDiagnostic,
               </li>
             ))}
           </ul>
-          <Link to="/checks/$id/documents" params={{ id: check.id }} search={version === undefined ? {} : { version }}
+          <Link to="/checks/$id/documents" {...checkLocation(check.id, version)}
             className="mt-2 inline-block text-sm text-primary underline">Открыть документы проверки</Link>
         </section>
       )}

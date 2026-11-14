@@ -29,11 +29,12 @@ export type Row = {
 export type Breakdown = { name: string; reported: string; note?: string; children?: Breakdown[] };
 export type Doc = { id: string; demoUpload?: boolean; title: string; fileName?: string; type: string; number: string; date: string; contract: string; pages: number; previewPages?: { src: string; width: number; height: number }[]; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
 export type Check = {
-  id: "a" | "b" | "c" | "g"; title: string; contract: string; period: string;
+  id: "a" | "b" | "c" | "g" | `demo-${string}`; title: string; contract: string; period: string;
   reportRow?: string;
   kfzNumber: string;
   synthetic?: boolean;
   date: string;
+  createdAt?: number;
   conclusion: "Достоверен" | "Недостоверен" | "Подтвердить полностью нельзя";
   state: "Готово к разбору" | "Подписано" | "Нужна повторная подпись";
   rows: Row[]; docs: Doc[];

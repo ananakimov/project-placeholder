@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Check } from "@/data/mock";
+import { checkLocation } from "@/lib/check-location";
 import { checkName } from "@/lib/check-name";
 
 const tabs = [
@@ -49,8 +50,8 @@ export function CheckHeader({ check, accepted = false, versionControls }: {
             <Link
               key={t.to}
               to={t.to}
-              params={{ id: check.id }}
-              search={(previous) => previous.version === undefined ? {} : { version: previous.version }}
+              params={checkLocation(check.id).params}
+              search={(previous) => checkLocation(check.id, previous.version).search}
               activeOptions={{ exact: "exact" in t }}
               className="-mb-px border-b-2 border-transparent pb-2.5 text-sm text-muted-foreground hover:text-foreground"
               activeProps={{ className: "!border-primary !text-foreground font-medium" }}

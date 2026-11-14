@@ -1,30 +1,28 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  ArrowDown,
   ArrowUpRight,
   ChevronRight,
   FileSearch,
   Files,
-  Plus,
   Search,
-  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DemoHistory } from "@/components/check/DemoHistory";
 import { Input } from "@/components/ui/input";
 import { type Check } from "@/data/mock";
 import { useChecks } from "@/context/ChecksContext";
 import { cn } from "@/lib/utils";
 import { checkName } from "@/lib/check-name";
 export function countByStatus(c: Check) {
-  const rows = c.rows.filter((r) => !r.service);
+  const rows = c.rows.filter((r) => !r.service && !r.nested);
   return {
     verified: rows.filter((r) => r.status === "verified").length,
     discrepancy: rows.filter((r) => r.status === "discrepancy").length,
     unverified: rows.filter((r) => r.status === "unverified").length,
   };
 }
-const labels = { all: "Все проверки", attention: "Требуют внимания", verified: "Без расхождений" };
+const labels = { all: "Все", discrepancy: "Есть расхождения", unverified: "Неполные данные", verified: "Без расхождений" };
 type Filter = keyof typeof labels;
 function CoverageBar({ c }: { c: Check["coverage"] }) {
   return (
@@ -47,31 +45,21 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<"recent" | "name">("recent");
-  const attention = checks.filter((c) => c.conclusion !== "Достоверен");
-  const filtered = useMemo(
-    () =>
-      checks
-        .filter(
-          (c) =>
-            (!q.trim() ||
-              `${checkName(c)} ${c.title} ${c.contract}`.toLowerCase().includes(q.trim().toLowerCase())) &&
-            (filter === "all" ||
-              (filter === "verified"
-                ? c.conclusion === "Достоверен"
-                : c.conclusion !== "Достоверен")),
-        )
-        .sort((a, b) =>
-          sort === "name"
-            ? checkName(a).localeCompare(checkName(b), "ru", { numeric: true })
-            : b.date
-                .split(".")
-                .reverse()
-                .join("")
-                .localeCompare(a.date.split(".").reverse().join("")),
-        ),
-    [checks, q, filter, sort],
+  const results = useMemo(() => checks.map((check) => ({ check, counts: countByStatus(check) })), [checks]);
+
+  function matches(counts: ReturnType<typeof countByStatus>, value: Filter) {
+    if (value === "all") return true;
+    if (value === "verified") return counts.verified > 0 && counts.discrepancy === 0 && counts.unverified === 0;
+    return counts[value] > 0;
+  }
+
+  const search = q.trim().toLowerCase();
+  const filtered = results.filter(({ check, counts }) => matches(counts, filter) &&
+    `${checkName(check)} ${check.title} ${check.contract}`.toLowerCase().includes(search));
+  filtered.sort(({ check: a }, { check: b }) => sort === "name"
+    ? checkName(a).localeCompare(checkName(b), "ru", { numeric: true })
+    : b.date.split(".").reverse().join("").localeCompare(a.date.split(".").reverse().join("")),
   );
-  const verified = checks.filter((c) => c.conclusion === "Достоверен").length;
   return (
     <div className="overview-page">
       <div className="page-heading">
@@ -81,17 +69,11 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
             Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.
           </p>
         </div>
-        <Button asChild className="new-check-button">
-          <Link to="/checks/new">
-            <Plus size={17} />
-            Новая проверка
-          </Link>
-        </Button>
       </div>
       <div className="checks-section">
         <div className="section-heading">
           <h2>
-            Ваши проверки <span>{checks.length}</span>
+            Готовые примеры <span>{checks.length}</span>
           </h2>
           <div className="legend">
             <i />
@@ -113,7 +95,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
               >
                 {labels[f]}
                 <span>
-                  {f === "all" ? checks.length : f === "attention" ? attention.length : verified}
+                  {results.filter(({ counts }) => matches(counts, f)).length}
                 </span>
               </button>
             ))}
@@ -128,14 +110,13 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                 onChange={(e) => setQ(e.target.value)}
               />
             </div>
-            <button
-              className="sort-button"
-              onClick={() => setSort((s) => (s === "recent" ? "name" : "recent"))}
-              aria-label={sort === "recent" ? "Сортировать по названию" : "Сортировать по дате"}
-              title={sort === "recent" ? "По дате · изменить" : "По названию · изменить"}
-            >
-              <SlidersHorizontal size={17} />
-            </button>
+            <label className="checks-sort">
+              Сортировка
+              <select value={sort} onChange={(event) => setSort(event.target.value === "name" ? "name" : "recent")}>
+                <option value="recent">Сначала новые</option>
+                <option value="name">По названию</option>
+              </select>
+            </label>
           </div>
         </div>
         <div className="checks-table-wrap">
@@ -146,19 +127,14 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                 <th>Документы</th>
                 <th>Покрытие по сумме</th>
                 <th>Результат</th>
-                <th>
-                  <button onClick={() => setSort((s) => (s === "recent" ? "name" : "recent"))}>
-                    Дата <ArrowDown size={12} />
-                  </button>
-                </th>
+                <th aria-sort={sort === "recent" ? "descending" : "none"}>Дата</th>
                 <th aria-label="Открыть" />
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => {
-                const n = countByStatus(c);
-                const good = c.conclusion === "Достоверен";
-                const bad = c.conclusion === "Недостоверен";
+              {filtered.map(({ check: c, counts: n }) => {
+                const good = matches(n, "verified");
+                const bad = n.discrepancy > 0;
                 return (
                   <tr key={c.id}>
                     <td>
@@ -196,7 +172,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                         className={cn("result-chip", good ? "mint" : bad ? "peach" : "lavender")}
                       >
                         <i />
-                        {good ? "Подтверждено" : bad ? "Есть расхождения" : "Неполные данные"}
+                        {good ? "Подтверждено" : bad ? "Есть расхождения" : n.unverified > 0 ? "Неполные данные" : "Нет показателей"}
                       </span>
                       <small className="result-detail">
                         {c.state === "Подписано"
@@ -205,7 +181,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                             ? `${n.discrepancy} расхожд. · ${n.unverified} не проверено`
                             : good
                               ? "Можно перейти к заключению"
-                              : `${n.unverified} показателей без подтверждения`}
+                              : n.unverified > 0 ? `${n.unverified} показателей без подтверждения` : ""}
                       </small>
                     </td>
                     <td className="date-cell">{c.date}</td>
@@ -229,7 +205,7 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
               <FileSearch size={32} />
               <h3>{checks.length ? "Проверки не найдены" : "Здесь появятся ваши проверки"}</h3>
               {checks.length > 0 && <p>Попробуйте другой запрос или сбросьте фильтры.</p>}
-              {checks.length ? (
+              {checks.length > 0 && (
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -239,15 +215,12 @@ export function Checks({ checks: override }: { checks?: Check[] }) {
                 >
                   Сбросить фильтры
                 </Button>
-              ) : (
-                <Button asChild>
-                  <Link to="/checks/new">Новая проверка</Link>
-                </Button>
               )}
             </div>
           )}
         </div>
       </div>
+      {filter === "all" && <DemoHistory search={q} />}
     </div>
   );
 }

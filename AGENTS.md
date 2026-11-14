@@ -31,4 +31,4 @@ use the editor.
 
 ## Application structure
 - Keep `src/data/rules.ts` as browser-safe explanation data, not a rule-management route; shared explanation panels consume it without navigation.
-- Keep wizard uploads in memory and navigate to the fixed mock result without deriving or changing check data; the prototype does not read uploaded files.
+- Keep file selections in memory. Manual submissions create a local demo job with metadata only. The separate example action opens the fixed sample. The prototype does not read uploaded files or derive check data from them.

@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CheckConclusion } from "@/pages/CheckConclusion";
 import { CheckDetail } from "@/pages/CheckDetail";
 import { CheckHeader } from "@/components/check/CheckHeader";
-import { ChecksProvider, useChecks } from "@/context/ChecksContext";
+import { ChecksProvider, applyVariants, useChecks } from "@/context/ChecksContext";
 import { checks } from "@/data/mock";
 import { PROBLEMS } from "@/data/problems";
 
@@ -23,20 +23,26 @@ function Result() {
 function setup() { render(<ChecksProvider><Result /></ChecksProvider>); }
 
 describe("Combined result", () => {
-  it("shows the conclusion, three counters, coverage and problems before the full table", () => {
+  it("shows one summary before the table and the conclusion below diagnostics", () => {
     setup();
-    const summary = screen.getByRole("region", { name: "Заключение по проверке" });
-    expect(within(summary).getByRole("heading", { name: "Недостоверен" })).toBeInTheDocument();
-    expect(Array.from(screen.getByLabelText("Счётчики показателей").querySelectorAll("dd")).map((node) => node.textContent)).toEqual(["6", "5", "0"]);
-    expect(within(summary).getByText("38,6%")).toBeInTheDocument();
-    expect(within(summary).getByText("Найденные проблемы")).toBeInTheDocument();
-    expect(summary.compareDocumentPosition(screen.getByRole("table", { name: "Показатели КФЗ" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const summary = screen.getByRole("region", { name: "Результаты проверки" });
+    const table = screen.getByRole("table", { name: "Показатели КФЗ" });
+    const diagnostics = screen.getByRole("region", { name: "Дополнительные проверки" });
+    const conclusion = screen.getByRole("region", { name: "Заключение по проверке" });
+    expect(within(summary).getByText(/6 стр.*38,6%/)).toBeInTheDocument();
+    expect(within(conclusion).getByRole("heading", { name: "Недостоверен" })).toBeInTheDocument();
+    expect(screen.queryByText("Найденные проблемы")).not.toBeInTheDocument();
+    expect(summary.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(table.compareDocumentPosition(diagnostics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(diagnostics.compareDocumentPosition(conclusion) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(table).getByRole("columnheader", { name: "Пояснение" })).toBeInTheDocument();
     const navigation = screen.getByRole("navigation", { name: "Разделы проверки" });
     expect(within(navigation).getAllByRole("link").map((link) => link.textContent)).toEqual(["Результат", "Документы"]);
   });
   it("opens and scrolls to a problem row even if search and filters had hidden it", () => {
-    setup();
-    fireEvent.click(screen.getByRole("button", { name: "Подтверждено 6" }));
+    const c = checks.find((check) => check.id === "c")!;
+    render(<ChecksProvider><CheckDetail check={c} /></ChecksProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Подтверждено 4" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Поиск показателя или документа" }), { target: { value: "нет такого" } });
     fireEvent.click(screen.getByRole("button", { name: "Перейти к строке: Командировки" }));
     const trigger = screen.getByRole("button", { name: "Командировки" });
@@ -45,13 +51,31 @@ describe("Combined result", () => {
     expect(trigger.closest("tr")).toHaveFocus();
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
     expect(screen.getByRole("textbox", { name: "Поиск показателя или документа" })).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Все 11" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Все 9" })).toHaveAttribute("aria-pressed", "true");
   });
   it("keeps every problem linked to an existing indicator", () => {
     for (const check of checks) for (const block of PROBLEMS[check.id] ?? []) for (const problem of block.items) {
       expect(problem.rowIds.length).toBeGreaterThan(0);
       for (const id of problem.rowIds) expect(check.rows.some((row) => row.id === id)).toBe(true);
     }
+  });
+  it("keeps possible causes in an expanded row without a source document", () => {
+    render(<ChecksProvider><CheckDetail check={checks.find((check) => check.id === "g")!} /></ChecksProvider>);
+    const name = "Трудоемкость (человеко-месяц)";
+    fireEvent.click(screen.getByRole("button", { name }));
+    const details = within(screen.getByRole("region", { name: `Подробности: ${name}` }));
+    expect(details.getByText("Возможные причины")).toBeInTheDocument();
+    expect(details.getByText("Ведомости подтверждают суммы, но не трудоёмкость в человеко-месяцах.")).toBeInTheDocument();
+    expect(details.getByText("Рекомендация")).toBeInTheDocument();
+  });
+  it("hides obsolete causes and recommendations after an indicator is corrected", () => {
+    const check = applyVariants(b, { "b-1": "fix" });
+    render(<ChecksProvider><CheckDetail check={check} /></ChecksProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Оплата труда" }));
+    const details = within(screen.getByRole("region", { name: "Подробности: Оплата труда" }));
+    expect(details.getByText("Подтверждено.")).toBeInTheDocument();
+    expect(details.queryByText("Возможные причины")).not.toBeInTheDocument();
+    expect(details.queryByText("Рекомендация")).not.toBeInTheDocument();
   });
   it("shows insufficient evidence with rule reasons and partial sums, without an unsupported document checklist", () => {
     const c = checks.find((check) => check.id === "c")!;
@@ -89,6 +113,7 @@ describe("Combined result", () => {
       const row = b.rows.find((item) => item.id === id)!;
       fireEvent.click(rowButtons.get(id)!);
       const details = within(table).getByRole("region", { name: `Подробности: ${row.name}` });
+      fireEvent.click(within(details).getByText("Действия бухгалтера"));
       expect(within(details).queryByRole("button", { name: "Исправить значение" })).not.toBeInTheDocument();
       fireEvent.change(within(details).getByRole("textbox", { name: "Комментарий" }), { target: { value: `Проверена строка ${id}` } });
       fireEvent.click(within(details).getByRole("button", { name: "Сохранить" }));

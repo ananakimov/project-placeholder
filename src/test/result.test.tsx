@@ -32,7 +32,7 @@ describe("Combined result", () => {
     expect(within(conclusion).getByRole("list", { name: "Счётчики показателей" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Полнота проверки" })).not.toBeInTheDocument();
     expect(screen.queryByText("Подробнее по суммам")).not.toBeInTheDocument();
-    expect(table.compareDocumentPosition(screen.getByRole("button", { name: "Принять проверку" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(table.compareDocumentPosition(screen.getByRole("button", { name: "Принять и скачать заключение" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("Найденные проблемы")).not.toBeInTheDocument();
     expect(conclusion.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(table).getAllByRole("columnheader").map((column) => column.textContent))
@@ -45,18 +45,20 @@ describe("Combined result", () => {
     const { rerender } = render(<ChecksProvider><CheckDetail check={sample} /></ChecksProvider>);
     const conclusion = () => within(screen.getByRole("region", { name: "Заключение по проверке" }));
     const counters = () => within(conclusion().getByRole("list", { name: "Счётчики показателей" }));
-    expect(conclusion().getByText(/по статье 0300 \(\+14\s800 ₽\) и по статье 0800 \(−25\s000 ₽\)/)).toBeInTheDocument();
-    expect(conclusion().getByText(/Ещё 2 показателя не удалось проверить/)).toBeInTheDocument();
+    expect(conclusion().getByText(/Статья 0300:.*1\s514\s800,00 ₽.*1\s500\s000,00 ₽.*\+14\s800,00 ₽/)).toBeInTheDocument();
+    expect(conclusion().getByText(/Статья 0800:.*575\s000,00 ₽.*600\s000,00 ₽.*−25\s000,00 ₽/)).toBeInTheDocument();
+    expect(conclusion().getByText(/Не удалось проверить 2 показателя: Трудоемкость и Материальные затраты/)).toBeInTheDocument();
     expect(counters().getAllByRole("listitem").map((item) => item.textContent))
       .toEqual(["Подтверждено — 2", "Расхождения — 2", "Не проверено — 2"]);
-    expect(conclusion().queryByText(/7\s818\s300/)).not.toBeInTheDocument();
+    expect(conclusion().getByText(/7\s818\s300/)).toBeInTheDocument();
+    expect(conclusion().getByText(/подтверждается часть затрат на 7 700 000,00 ₽/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Итого" }).closest("tr"))
       .toHaveTextContent("По представленным документам подтверждается часть затрат на 7 700 000,00 ₽; полной суммы нет.");
     const row = sample.rows.find((indicator) => indicator.id === "g-2")!;
     const updated = recheckDemo(sample, sample.docs.filter((doc) => doc.id !== row.sources[0]!.docId));
     rerender(<ChecksProvider><CheckDetail check={updated} version={2} /></ChecksProvider>);
     expect(conclusion().queryByText(/14\s800/)).not.toBeInTheDocument();
-    expect(conclusion().getByText(/−25\s000 ₽/)).toBeInTheDocument();
+    expect(conclusion().getByText(/−25\s000,00 ₽/)).toBeInTheDocument();
     expect(counters().getAllByRole("listitem").map((item) => item.textContent))
       .toEqual(["Подтверждено — 2", "Расхождения — 1", "Не проверено — 3"]);
   });
@@ -73,6 +75,21 @@ describe("Combined result", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
     expect(screen.getByRole("textbox", { name: "Поиск показателя или документа" })).toHaveValue("");
     expect(screen.getByRole("button", { name: "Все 9" })).toHaveAttribute("aria-pressed", "true");
+  });
+  it("opens the contributing source directly from the calculation without expanding the indicator", () => {
+    const sample = checks.find((check) => check.id === "g")!;
+    render(<ChecksProvider><CheckDetail check={sample} /></ChecksProvider>);
+    const indicator = screen.getByRole("button", { name: /Статья калькуляции 0300/ });
+    const row = within(indicator.closest("tr")!);
+    const calculation = row.getByText("Как рассчитано").closest("details")!;
+    calculation.open = true;
+    const sources = within(row.getByRole("list", { name: "Слагаемые ожидаемого значения" }));
+    expect(sources.getAllByRole("listitem")).toHaveLength(5);
+    fireEvent.click(sources.getByRole("button", { name: "Расчёт страховых взносов, январь 2027" }));
+    expect(indicator).toHaveAttribute("aria-expanded", "false");
+    const panel = within(screen.getByRole("region", { name: "Источник документа" }));
+    fireEvent.load(panel.getByRole("img"));
+    expect(panel.getByLabelText(/Подсвеченный фрагмент: Итого: 270\s000,00/)).toBeInTheDocument();
   });
   it("keeps every problem linked to an existing indicator", () => {
     for (const check of checks) for (const block of PROBLEMS[check.id] ?? []) for (const problem of block.items) {

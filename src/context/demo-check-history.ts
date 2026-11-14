@@ -93,11 +93,11 @@ export function useDemoCheckHistory() {
     return versions(check).filter((version) => version.number === 1 || version.readyAt <= now).at(-1)!;
   }
 
-  function accept(check: Check, number: number) {
+  function accept(check: Check, number: number, acceptedAt = Date.now()) {
     return update(check, (previous, time) => {
       const version = previous.find((item) => item.number === number);
       if (!version || version.readyAt > time || version.acceptedAt !== null) return null;
-      return previous.map((item) => item.number === number ? { ...item, acceptedAt: time } : item);
+      return previous.map((item) => item.number === number ? { ...item, acceptedAt } : item);
     });
   }
 

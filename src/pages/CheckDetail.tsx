@@ -4,17 +4,14 @@ import { Money } from "@/components/Money";
 import { SourceWorkspace, useSourceWorkspace } from "@/components/check/SourceWorkspace";
 import { fieldSource } from "@/components/check/document-annotations";
 import { AdditionalChecks } from "@/components/check/AdditionalChecks";
+import { IndicatorExplanation } from "@/components/check/IndicatorExplanation";
 import { CheckConclusion } from "@/pages/CheckConclusion";
 import { countByStatus } from "@/pages/Checks";
 import type { Check as CheckData, ExcludedDoc, Row, SourceRef, Status } from "@/data/mock";
 import { cn } from "@/lib/utils";
+import { indicatorStatus } from "@/lib/check-explanation";
 
 type Filter = "all" | Status;
-const statusLabels: Record<Status, string> = {
-  verified: "Подтверждено",
-  discrepancy: "Расхождение",
-  unverified: "Не проверено",
-};
 const statusIcons = { verified: Check, discrepancy: TriangleAlert, unverified: CircleHelp };
 const statusFilter = (row: Row) => !row.service && !row.nested;
 
@@ -131,14 +128,13 @@ function Reconciliation({ check, version }: ResultProps) {
                   </td>
                   <td className="indicator-status-cell">
                     <span className="row-status" data-status={row.status} role="img" tabIndex={0}
-                      aria-label={statusLabels[row.status]} onClick={(event) => event.stopPropagation()}>
+                      aria-label={indicatorStatus[row.status]} onClick={(event) => event.stopPropagation()}>
                       <StatusIcon size={14} aria-hidden="true" />
-                      <span className="indicator-status-label" aria-hidden="true">{statusLabels[row.status]}</span>
+                      <span className="indicator-status-label" aria-hidden="true">{indicatorStatus[row.status]}</span>
                     </span>
                   </td>
                   <td className="indicator-explanation">
-                    {row.reason || (row.status === "verified" ? "Значение подтверждено документами" : "—")}
-                    {row.service && row.partialNote && <p className="mt-1 text-muted-foreground">{row.partialNote}</p>}
+                    <IndicatorExplanation row={row} docs={docById} onSource={(index, trigger) => openSource(row, index, trigger)} />
                   </td>
                 </tr>
                 {isExpanded && <tr><td colSpan={6} className="!p-0 !text-left"><div id={`details-${row.id}`} role="region" aria-label={`Подробности: ${row.name}`} className="border-b bg-card px-4 py-3">

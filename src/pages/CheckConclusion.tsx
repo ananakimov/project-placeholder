@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { AcceptCheck } from "@/components/check/AcceptCheck";
-import { formatMoney } from "@/components/money-format";
 import { countByStatus } from "@/pages/Checks";
 import type { Check } from "@/data/mock";
 import { isKfz } from "@/data/demo-recheck";
 import { cn } from "@/lib/utils";
+import { formatMeasure, rowSummary } from "@/lib/check-explanation";
 
 const colors = {
   Достоверен: "mint",
@@ -20,39 +20,34 @@ function ConclusionSummary({ check, unverified }: { check: Check; unverified: nu
     return <p className="mt-2 text-sm leading-relaxed">Для сверки нового КФЗ требуется серверное распознавание.</p>;
   }
   const discrepancies = check.rows.filter((row) => !row.service && !row.nested && row.status === "discrepancy");
-  const findings = discrepancies.map((row) => {
-    const number = row.name.match(/\(Статья калькуляции (\d+)\)$/)?.[1];
-    const label = number ? `по статье ${number}` : `по показателю «${row.name}»`;
-    if (row.delta === null || Number(row.delta) === 0) return label;
-    const amount = formatMoney(row.delta).replace(/,00$/, "");
-    return `${label} (${row.delta.startsWith("-") ? "" : "+"}${amount} ${row.unit ?? "₽"})`;
-  });
-
+  const unchecked = check.rows.filter((row) => !row.service && !row.nested && row.status === "unverified");
+  const total = check.rows.find((row) => row.service && row.ruleId === "R-COV-01");
   const discrepancyCount = discrepancies.length;
   const discrepancyForm = plurals.select(discrepancyCount);
   const unverifiedForm = plurals.select(unverified);
   const unreadUploads = check.docs.some((doc) => doc.demoUpload);
-  const uploadNote = "данные из добавленных файлов недоступны для сверки";
   const incomplete = unverified > 0
-    ? `${discrepancyCount > 0 ? "Ещё" : "Не удалось проверить"} ${unverified} ${unverifiedForm === "one" ? "показатель" : unverifiedForm === "few" ? "показателя" : "показателей"}${discrepancyCount > 0 ? " не удалось проверить" : ""}${unreadUploads ? `, а ${uploadNote}` : ""}.`
+    ? `Не удалось проверить ${unverified} ${unverifiedForm === "one" ? "показатель" : unverifiedForm === "few" ? "показателя" : "показателей"}: ${list.format(unchecked.map((row) => row.unit ? row.name.replace(/ \([^)]*\)$/, "") : row.name))}.`
     : null;
-  const limitations = !incomplete && unreadUploads
+  const limitations = unreadUploads
     ? "Данные из добавленных файлов недоступны для сверки."
     : check.conclusion === "Подтвердить полностью нельзя" && !incomplete
       ? "Доступных подтверждений недостаточно для вывода по отчёту."
       : null;
 
-  return (
-    <p className="mt-2 max-w-[820px] text-sm leading-relaxed tabular-nums">
-      {discrepancyCount > 0 && <>
-        {discrepancyForm === "one" ? "Обнаружено" : "Обнаружены"} {discrepancyCount}{" "}
-        {discrepancyForm === "one" ? "расхождение" : discrepancyForm === "few" ? "расхождения" : "расхождений"}:{" "}
-        <strong className="font-medium">{list.format(findings)}</strong>.{" "}
-      </>}
-      {incomplete && <>{incomplete}{" "}</>}
-      {limitations ?? (!discrepancyCount && !incomplete && check.conclusion === "Достоверен" && "Все показатели подтверждены документами.")}
-    </p>
-  );
+  return <div className="mt-2 max-w-[930px] space-y-1 text-sm leading-relaxed tabular-nums">
+    {!!discrepancyCount && <>
+      <p>{discrepancyForm === "one" ? "Обнаружено" : "Обнаружены"} {discrepancyCount}{" "}
+        {discrepancyForm === "one" ? "расхождение" : discrepancyForm === "few" ? "расхождения" : "расхождений"}.</p>
+      <ul className="list-disc space-y-1 pl-5">{discrepancies.map((row) => <li key={row.id}>{rowSummary(row)}</li>)}</ul>
+    </>}
+    {incomplete && <p>{incomplete}</p>}
+    {limitations && <p>{limitations}</p>}
+    {!discrepancyCount && !incomplete && !limitations && check.conclusion === "Достоверен" && <p>Все показатели подтверждены документами.</p>}
+    {total?.status === "unverified" && <p>
+      Итого в КФЗ: <strong className="font-medium">{formatMeasure(total.reported, total.unit)}</strong>. {total.partialNote || total.reason}
+    </p>}
+  </div>;
 }
 
 export function CheckConclusion({ check, children, version }: { check: Check; children?: ReactNode; version?: number | undefined }) {
@@ -83,7 +78,7 @@ export function CheckConclusion({ check, children, version }: { check: Check; ch
         <ConclusionSummary check={check} unverified={counts.unverified} />
       </section>
       {children}
-      <AcceptCheck check={check} version={version} />
+      {check.rows.length > 0 && <AcceptCheck check={check} version={version} />}
     </div>
   );
 }

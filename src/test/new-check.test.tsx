@@ -39,20 +39,20 @@ describe("Single-screen new check", () => {
     expect(screen.getByRole("region", { name: "КФЗ" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Первичные документы" })).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Шаги" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Открыть готовый пример" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Загрузить пример" })).toBeEnabled();
   });
   it("requires a report even when primary documents have been added", () => {
     setup(); upload("docs", "Акт.pdf");
-    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
   });
   it("requires at least one primary document even when a report has been added", () => {
     setup(); upload("report", "КФЗ.pdf");
-    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
   });
   it("opens the fixed example without staging files or adding a job", () => {
     setup();
-    fireEvent.click(screen.getByRole("button", { name: "Открыть готовый пример" }));
+    fireEvent.click(screen.getByRole("button", { name: "Загрузить пример" }));
     expect(navigate).toHaveBeenCalledExactlyOnceWith({ to: "/checks/$id", params: { id: "g" } });
     expect(screen.getByText("Демо-заданий пока нет.")).toBeInTheDocument();
     expectExampleUnchanged();
@@ -63,7 +63,7 @@ describe("Single-screen new check", () => {
     for (const number of [1, 2]) {
       upload("report", `Приватное название отчёта ${number}.pdf`);
       upload("docs", `Акт ${number}.pdf`);
-      const submit = screen.getByRole("button", { name: "Добавить в демо-очередь" });
+      const submit = screen.getByRole("button", { name: "Запустить проверку" });
       fireEvent.click(submit);
       expect(submit).toBeDisabled();
       expect(screen.queryByText(`Акт ${number}.pdf`)).not.toBeInTheDocument();
@@ -83,9 +83,9 @@ describe("Single-screen new check", () => {
   });
   it.each(["КФЗ.pdf", "Акт.pdf"])("disables launch again when %s is removed", (name) => {
     setup(); upload("report", "КФЗ.pdf"); upload("docs", "Акт.pdf");
-    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: `Убрать ${name}` }));
-    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeDisabled();
   });
   it("keeps sequential demo jobs in memory when the storage quota is exceeded", () => {
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
@@ -96,7 +96,7 @@ describe("Single-screen new check", () => {
     for (const number of [1, 2]) {
       upload("report", `КФЗ ${number}.pdf`);
       upload("docs", `Акт ${number}.pdf`);
-      fireEvent.click(screen.getByRole("button", { name: "Добавить в демо-очередь" }));
+      fireEvent.click(screen.getByRole("button", { name: "Запустить проверку" }));
     }
     const recent = within(screen.getByRole("region", { name: "Последние демо-задания" }));
     expect(recent.getAllByRole("listitem")).toHaveLength(2);
@@ -119,7 +119,7 @@ describe("Single-screen new check", () => {
   it("does not infer that a file is damaged from its name", () => {
     setup(); upload("report", "КФЗ.pdf"); upload("docs", "Документ (повреждён).xlsx");
     expect(screen.queryByText(/Файл не открыт/)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Запустить проверку" })).toBeEnabled();
   });
   it("uses the 23 original input files with exact sizes and hashes, excluding reference answers", () => {
     expect(SAMPLE_REPORT.name).toBe("01_Карточка_учета_фактических_затрат_этап_3.pdf");

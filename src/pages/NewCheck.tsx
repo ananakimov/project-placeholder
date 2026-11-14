@@ -36,14 +36,14 @@ export function NewCheck() {
   return (
     <div className="upload-page">
       <h1>Новая проверка</h1>
-      <p className="upload-intro">Демо-режим. Выберите КФЗ и первичные документы, чтобы посмотреть очередь. Файлы не отправляются.</p>
+      <p className="upload-intro">Добавьте КФЗ и первичные документы. В демо-режиме файлы не отправляются.</p>
       <div className="mt-6 grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         <UploadBlock group="report" files={report} error={errors.report} onFiles={takeFiles} onRemove={() => setReport([])} />
         <UploadBlock group="docs" files={docs} error={errors.docs} onFiles={takeFiles} onRemove={(index) => setDocs((previous) => previous.filter((_, i) => i !== index))} />
       </div>
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button disabled={!canStart} onClick={submit}>Добавить в демо-очередь <ArrowRight size={17} /></Button>
-        <Button variant="outline" onClick={() => navigate({ to: "/checks/$id", params: { id: "g" } })}>Открыть готовый пример</Button>
+        <Button disabled={!canStart} onClick={submit}>Запустить проверку <ArrowRight size={17} /></Button>
+        <Button variant="outline" onClick={() => navigate({ to: "/checks/$id", params: { id: "g" } })}>Загрузить пример</Button>
       </div>
       <DemoHistory title="Последние демо-задания" />
     </div>

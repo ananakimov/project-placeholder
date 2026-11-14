@@ -36,11 +36,11 @@ describe("Check names", () => {
 });
 
 describe("Checks list", () => {
-  it("keeps result links, provenance, conclusions and dates without overview cards", () => {
+  it("keeps creation and result links, provenance, conclusions and dates without overview cards", () => {
     setup();
     expect(screen.getByRole("heading", { name: "Проверки", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Новая проверка" })).toHaveAttribute("href", "/checks/new");
     expect(screen.getByText("Сверяйте отчёты с первичными документами. Разбирайте только то, что требует внимания.")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Новая проверка" })).not.toBeInTheDocument();
     expect(resultLinks().map((link) => link.textContent)).toEqual(["Проверка КФЗ №c", "КФЗ №3/7", "Проверка КФЗ №a", "Проверка КФЗ №b"]);
     expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/c", "/checks/g", "/checks/a", "/checks/b"]);
     expect(screen.getAllByText("Синтетика")).toHaveLength(4);
@@ -69,7 +69,7 @@ describe("Checks list", () => {
     expect(screen.getByText("Проверки не найдены")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сбросить фильтры" }));
     expect(search).toHaveValue("");
-    expect(screen.getByRole("button", { name: "Все 4" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Все проверки 4" })).toHaveAttribute("aria-pressed", "true");
     expect(resultLinks()).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "Без расхождений 1" }));
     expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/a"]);
@@ -77,9 +77,9 @@ describe("Checks list", () => {
 
   it("sorts by displayed names and switches back to check dates", () => {
     setup();
-    fireEvent.change(screen.getByRole("combobox", { name: "Сортировка" }), { target: { value: "name" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сортировать по названию" }));
     expect(resultLinks().map((link) => link.textContent)).toEqual(["КФЗ №3/7", "Проверка КФЗ №a", "Проверка КФЗ №b", "Проверка КФЗ №c"]);
-    fireEvent.change(screen.getByRole("combobox", { name: "Сортировка" }), { target: { value: "recent" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сортировать по дате" }));
     expect(resultLinks().map((link) => link.getAttribute("href"))).toEqual(["/checks/c", "/checks/g", "/checks/a", "/checks/b"]);
   });
 });

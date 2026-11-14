@@ -1,6 +1,6 @@
 import { type CheckSearch, checkLocation, isDemoRun } from "@/lib/check-location";
 import { checkName } from "@/lib/check-name";
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useMatch } from "@tanstack/react-router";
 import { CheckHeader } from "@/components/check/CheckHeader";
 import { VersionControls } from "@/components/check/VersionControls";
 import { getCheck } from "@/data/mock";
@@ -37,6 +37,7 @@ export function useCheckVersion() {
 
 function CheckLayout() {
   const { base, selected, ready } = useCheckVersion();
+  const documents = useMatch({ from: "/checks/$id/documents", shouldThrow: false });
   if (!base && !ready) return <p className="py-12 text-center text-muted-foreground">Загрузка проверки…</p>;
   if (!base)
     return (
@@ -53,6 +54,7 @@ function CheckLayout() {
           className="mt-3 inline-block text-sm text-primary underline">Открыть текущую версию</Link>}
       </div>
     );
+  if (documents) return <Outlet />;
   return (
     <div>
       <CheckHeader check={selected.result}

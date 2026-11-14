@@ -16,6 +16,25 @@ function percent(amount: string, total: string): string {
 // Project the stored synthetic evidence onto the edited package. A new file has
 // no extracted fields in the demo, so it cannot substantiate an amount.
 export function recheckDemo(previous: Check, docs: readonly Doc[]): Check {
+  if (docs.some((doc) => isKfz(doc) && doc.demoUpload)) {
+    return {
+      ...previous,
+      synthetic: true,
+      state: "Готово к разбору",
+      title: "Проверка КФЗ",
+      kfzNumber: "",
+      reportRow: "",
+      contract: "",
+      period: "",
+      docs: docs.map((doc) => doc.state === "вне периода" || doc.state === "другой договор" ? { ...doc, state: "прочитан" } : doc),
+      rows: [],
+      excluded: [],
+      missing: [],
+      exceptionOrder: [],
+      conclusion: "Подтвердить полностью нельзя",
+      coverage: { totalSum: "", verifiedSum: "", discrepancySum: "", unverifiedSum: "", verifiedPct: "", discrepancyPct: "", unverifiedPct: "" },
+    };
+  }
   const retained = new Set(docs.map((doc) => doc.id));
   const hasUnprocessedFiles = docs.some((doc) => doc.demoUpload);
   const exclusions = previous.excluded.filter((doc) => retained.has(doc.docId));

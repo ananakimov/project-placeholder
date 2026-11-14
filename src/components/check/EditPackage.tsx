@@ -6,7 +6,7 @@ import { fileExtension, primaryFileAccept, primaryFileTypes } from "@/components
 import { isKfz } from "@/data/demo-recheck";
 import type { Doc } from "@/data/mock";
 
-type FileAction = { mode: "add" } | { mode: "replace"; id: string };
+type FileAction = { mode: "add" } | { mode: "replace"; id: string; report?: boolean };
 
 export function EditPackage({ docs, disabled, submit }: {
   docs: readonly Doc[];
@@ -25,19 +25,22 @@ export function EditPackage({ docs, disabled, submit }: {
     action.current = actionType;
     if (!input.current) return;
     input.current.multiple = actionType.mode === "add";
+    input.current.accept = actionType.mode === "replace" && actionType.report ? ".pdf" : primaryFileAccept;
     input.current.click();
   }
 
   function addFiles(files: FileList | null) {
     if (!files?.length) return;
-    const valid = Array.from(files).filter((file) => primaryFileTypes.includes(fileExtension(file.name)));
-    setError(valid.length !== files.length ? `Поддерживаются: ${primaryFileTypes.join(", ")}.` : "");
+    const current = action.current;
+    const report = current.mode === "replace" && current.report;
+    const allowed = report ? ["PDF"] : primaryFileTypes;
+    const valid = Array.from(files).filter((file) => allowed.includes(fileExtension(file.name)));
+    setError(valid.length !== files.length ? `Поддерживаются: ${allowed.join(", ")}.` : "");
     if (!valid.length) return;
     const additions: Doc[] = valid.map((file) => ({
-      id: crypto.randomUUID(), title: file.name, fileName: file.name, type: fileExtension(file.name),
+      id: crypto.randomUUID(), title: file.name, fileName: file.name, type: report ? "КФЗ" : fileExtension(file.name),
       number: "", date: "", contract: "", pages: 0, fields: [], state: "не прочитан", demoUpload: true,
     }));
-    const current = action.current;
     setDraft((previous) => current.mode === "add"
       ? [...previous, ...additions]
       : previous.map((doc) => doc.id === current.id ? additions[0]! : doc));
@@ -63,7 +66,13 @@ export function EditPackage({ docs, disabled, submit }: {
           {draft.map((doc) => (
             <li key={doc.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
               <span className="min-w-0 flex-1 break-words">{doc.title}</span>
-              {isKfz(doc) ? <small className="text-muted-foreground">КФЗ</small> : (
+              {isKfz(doc) ? (
+                <span className="flex items-center gap-2">
+                  <small className="text-muted-foreground">КФЗ</small>
+                  <Button type="button" size="icon" variant="ghost" title="Заменить КФЗ" aria-label="Заменить КФЗ"
+                    onClick={() => choose({ mode: "replace", id: doc.id, report: true })}><Pencil size={15} /></Button>
+                </span>
+              ) : (
                 <span className="flex gap-1">
                   <Button type="button" size="icon" variant="ghost" title="Заменить" aria-label={`Заменить ${doc.title}`}
                     onClick={() => choose({ mode: "replace", id: doc.id })}><Pencil size={15} /></Button>

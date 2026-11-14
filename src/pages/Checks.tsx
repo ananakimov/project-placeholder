@@ -168,18 +168,18 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                         <span className={cn("file-symbol", theme)}><FileSearch size={21} aria-hidden="true" /></span>
                         <div>
                           <Link to="/checks/$id" {...checkLocation(check.id, versionNumber)}>{checkName(check)}</Link>
-                          <small>Договор {check.contract}</small>
-                          <small className="period">{check.period.replace("–", " — ")}</small>
+                          {check.contract && <small>Договор {check.contract}</small>}
+                          {check.period && <small className="period">{check.period.replace("–", " — ")}</small>}
                         </div>
                       </div>
                     </td>
                     <td><span className={cn("result-chip", archive ? "accepted" : theme)}>{archive ? "Принят" : status}</span></td>
-                    <td>
+                    {check.rows.length > 0 ? <td>
                       <CoverageBar c={check.coverage} />
                       <small className="coverage-description">
                         {counts.verified} из {counts.verified + counts.discrepancy + counts.unverified} показателей
                       </small>
-                    </td>
+                    </td> : <td aria-label="Покрытие отсутствует">—</td>}
                     <td><span className="document-count"><Files size={15} aria-hidden="true" />{check.docs.length}</span></td>
                     <td className="date-cell">{check.createdAt === undefined ? check.date : <DemoJobTime createdAt={version.createdAt} />}</td>
                   </tr>

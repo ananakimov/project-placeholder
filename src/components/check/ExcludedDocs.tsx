@@ -35,7 +35,6 @@ export function ExcludedDocs({ check, onSource }: {
           })}
         </TableBody>
       </Table>
-      <p className="mt-2 text-[11px] text-muted-foreground">Исключение документа не считается расхождением отчёта, если статья сходится</p>
     </section>
   );
 }

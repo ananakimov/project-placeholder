@@ -106,7 +106,10 @@ export function useDemoCheckHistory() {
       const version = previous.find((item) => item.number === from);
       if (!version || version.readyAt > time || previous.some((item) => item.readyAt > time)) return null;
       const report = version.result.docs.find(isKfz);
-      if (!report || docs.filter(isKfz).length !== 1 || !docs.some((doc) => doc.id === report.id) ||
+      const reports = docs.filter(isKfz);
+      const nextReport = reports[0];
+      if (!report || !nextReport || reports.length !== 1 ||
+          (nextReport.id !== report.id && (!nextReport.demoUpload || nextReport.state !== "не прочитан")) ||
           new Set(docs.map((doc) => doc.id)).size !== docs.length) return null;
       const oldIds = new Set(version.result.docs.map((doc) => doc.id));
       if (docs.length === oldIds.size && docs.every((doc) => oldIds.has(doc.id))) return null;

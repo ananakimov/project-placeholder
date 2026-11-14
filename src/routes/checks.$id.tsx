@@ -55,7 +55,7 @@ function CheckLayout() {
     );
   return (
     <div>
-      <CheckHeader check={selected.result} accepted={selected.acceptedAt !== null}
+      <CheckHeader check={selected.result}
         versionControls={<VersionControls check={base} selected={selected} />} />
       <div className="mt-5"><Outlet /></div>
     </div>

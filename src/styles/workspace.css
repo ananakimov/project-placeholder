@@ -217,10 +217,9 @@ button:disabled {
 }
 .checks-toolbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 12px;
   padding-bottom: 24px;
 }
 .filter-tabs {
@@ -243,11 +242,6 @@ button:disabled {
 .filter-tabs button span {
   font-size: 11px;
   color: var(--ui-secondary);
-}
-.toolbar-inputs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 .search-wrap {
   position: relative;
@@ -285,7 +279,7 @@ button:disabled {
   white-space: nowrap;
 }
 .checks-table td {
-  padding: 18px 14px;
+  padding: 16px 14px;
   border-bottom: 1px solid var(--ui-line);
 }
 .checks-table th:first-child,
@@ -293,6 +287,7 @@ button:disabled {
   padding-left: 0;
 }
 .check-result-row { cursor: pointer; }
+.checks-table .check-result-row td { padding-block: 10px; }
 .check-result-row:hover,
 .check-result-row:focus-within {
   background: #fafcfc;
@@ -2747,9 +2742,6 @@ kbd {
   .page-heading p {
     font-size: 13px;
   }
-  .checks-toolbar {
-    gap: 18px;
-  }
   .filter-tabs {
     gap: 3px;
   }
@@ -2757,12 +2749,8 @@ kbd {
     font-size: 11px;
     padding: 10px;
   }
-  .toolbar-inputs {
-    width: 100%;
-  }
   .search-wrap {
     width: 100%;
-    flex: 1;
   }
   .checks-table {
     min-width: 0;
@@ -2777,7 +2765,7 @@ kbd {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
-    padding: 14px 0;
+    padding: 12px 0;
     border-top: 1px solid var(--ui-line);
   }
   .checks-table td {
@@ -3081,7 +3069,8 @@ kbd {
 }
 .compact-source .annotation-checkbox { width: 14px; height: 14px; }
 .compact-source .document-toolbar {
-  justify-content: start;
+  margin-inline-start: auto;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 2px 4px;
   padding: 0;
@@ -3346,4 +3335,3 @@ kbd {
 .queue-stages li[data-done="true"] { background: var(--ui-mint); color: var(--ui-ink); }
 .queue-stages li[aria-current="step"] { background: var(--ui-selected); color: var(--ui-ink); font-weight: 600; }
 .queue-processed { margin-top: 6px; font-size: 12px; color: var(--ui-secondary); }
-.checks-table .check-result-row td { padding-block: 12px; }

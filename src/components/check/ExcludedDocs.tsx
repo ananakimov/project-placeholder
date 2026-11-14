@@ -30,7 +30,7 @@ export function ExcludedDocs({ check }: { check: Check }) {
             return (
               <TableRow key={e.docId} tabIndex={0} onClick={() => setOpen(e)} onKeyDown={(k) => k.key === "Enter" && setOpen(e)} className="cursor-pointer even:bg-row-zebra hover:bg-row-hover">
                 <TableCell className="font-medium text-primary">{e.file}</TableCell>
-                <TableCell><div className="flex flex-wrap gap-1"><Badge variant="outline" className="gap-1 whitespace-nowrap border-border bg-unverified-bg font-normal text-unverified"><Icon className="h-3 w-3" />{e.reason}</Badge><Badge variant="outline" className="font-mono">{e.ruleId}</Badge></div></TableCell>
+                <TableCell><div className="flex flex-wrap gap-1"><Badge variant="outline" className="gap-1 whitespace-nowrap border-border bg-unverified-bg font-normal text-unverified"><Icon className="h-3 w-3" />{e.reason}</Badge></div></TableCell>
                 <TableCell className="text-right"><Money value={e.amount} /></TableCell>
                 <TableCell className="whitespace-normal text-muted-foreground">{e.impact}</TableCell>
               </TableRow>
@@ -40,8 +40,8 @@ export function ExcludedDocs({ check }: { check: Check }) {
       </Table>
       <p className="mt-2 text-[11px] text-muted-foreground">Исключение документа не считается расхождением отчёта, если статья сходится</p>
       <Sheet open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
-        <SheetContent className="w-[520px] overflow-y-auto sm:max-w-[520px]">
-          <SheetHeader><SheetTitle>Исключённый документ</SheetTitle>{open && <Badge variant="outline" className="w-fit font-mono">{open.ruleId}</Badge>}</SheetHeader>
+        <SheetContent className="w-full overflow-y-auto sm:max-w-[520px]">
+          <SheetHeader><SheetTitle>Исключённый документ</SheetTitle></SheetHeader>
           <div className="mt-4">{open && row && <SourceViewer row={row} source={source} doc={doc} onWhy={() => {}} />}</div>
         </SheetContent>
       </Sheet>

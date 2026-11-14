@@ -1,7 +1,7 @@
 import { checkName } from "@/lib/check-name";
 import { getCheck } from "@/data/mock";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckExceptions } from "@/pages/CheckExceptions";
+import { CheckDetail } from "@/pages/CheckDetail";
 import { useChecks } from "@/context/ChecksContext";
 
 export const Route = createFileRoute("/checks/$id/exceptions")({
@@ -9,6 +9,6 @@ export const Route = createFileRoute("/checks/$id/exceptions")({
   component: () => {
     const { id } = Route.useParams();
     const check = useChecks().getCheck(id);
-    return check ? <CheckExceptions check={check} /> : null;
+    return check ? <CheckDetail check={check} /> : null;
   },
 });

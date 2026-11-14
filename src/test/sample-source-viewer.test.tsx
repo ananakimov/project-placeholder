@@ -12,7 +12,7 @@ import { checks, type Bbox } from "@/data/mock";
 import { SAMPLE_FILES } from "@/data/sample-files";
 import manifest from "@/data/sample-document-pages.json";
 
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn(), Link: ({ children }: { children: import("react").ReactNode }) => <a>{children}</a> }));
 beforeAll(() => {
   HTMLElement.prototype.scrollTo = vi.fn();
 });

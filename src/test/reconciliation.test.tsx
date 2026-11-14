@@ -6,7 +6,7 @@ import { ChecksProvider } from "@/context/ChecksContext";
 import { checks, type Check } from "@/data/mock";
 import { sumMoney } from "@/components/money-format";
 
-vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("@tanstack/react-router", () => ({ useNavigate: () => vi.fn(), Link: ({ children }: { children: import("react").ReactNode }) => <a>{children}</a> }));
 beforeAll(() => { HTMLElement.prototype.scrollTo = vi.fn(); });
 afterEach(cleanup);
 const b = checks.find((check) => check.id === "b")!;
@@ -134,7 +134,7 @@ describe("Reconciliation workspace", () => {
   it("shows missing evidence and recommendations in a source-less expanded row", () => {
     const g = checks.find((check) => check.id === "g")!;
     desk(g); const details = expand(g, "g-5");
-    expect(within(details).getByText("Нет подтверждающего документа")).toBeInTheDocument();
+    expect(within(details).getByText(/не подтверждена отдельным расчётом/)).toBeInTheDocument();
     expect(within(details).getByText("Рекомендация")).toBeInTheDocument();
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
   });

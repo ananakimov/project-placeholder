@@ -32,7 +32,7 @@ export function CheckHeader({ check, accepted = false, versionControls }: {
           <div className="mt-1 flex flex-wrap items-center gap-3 text-[13px] text-muted-foreground">
             {check.reportRow && <span>{check.reportRow}</span>}
             <span className="tabular-nums">
-              Договор {check.contract} · Период {check.period}
+              {check.contract && `Договор ${check.contract}`}{check.contract && check.period && " · "}{check.period && `Период ${check.period}`}
             </span>
             <Badge variant="outline" className={cn("font-normal", {
               "bg-verified-bg text-verified": check.conclusion === "Достоверен",
@@ -41,7 +41,6 @@ export function CheckHeader({ check, accepted = false, versionControls }: {
             })}>
               {check.conclusion}
             </Badge>
-            {check.synthetic && <span>Пример</span>}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ArrowDown, ArrowUp, Check, CheckCheck, ChevronRight, ArrowLeft, FileText, Eye, Maximize2, Minimize2, Search, X } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Check, CheckCheck, CircleHelp, TriangleAlert, ChevronRight, ArrowLeft, FileText, Eye, Maximize2, Minimize2, Search, X } from "lucide-react";
 import { Money } from "@/components/Money";
 import { SourceViewer } from "@/components/check/SourceViewer";
 import { DocumentFields } from "@/components/check/DocumentFields";
@@ -17,6 +17,7 @@ const statusLabels: Record<Status, string> = {
   discrepancy: "Расхождение",
   unverified: "Не проверено",
 };
+const statusIcons = { verified: Check, discrepancy: TriangleAlert, unverified: CircleHelp };
 const statusFilter = (row: Row) => !row.service && !row.nested;
 type EvidenceSelection = { rowId: string; index: number; sources: readonly SourceRef[] };
 
@@ -185,12 +186,13 @@ function Reconciliation({ check, version }: ResultProps) {
           {query && <button aria-label="Очистить поиск" onClick={() => setQuery("")}><X size={14} /></button>}
         </div>
         <div className="overflow-x-auto">
-          <table className="reconcile-table" aria-label="Показатели КФЗ">
-            <thead><tr>{["Показатель", "В отчёте, ₽", "Документы, ₽", "Разница, ₽"].map(
+          <table className="reconcile-table kfz-result-table" aria-label="Показатели КФЗ">
+            <thead><tr>{["Показатель КФЗ", "В КФЗ", "Ожидаемо", "Разница Δ", "Статус", "Пояснение"].map(
               (label) => <th key={label} scope="col">{label}</th>,
             )}</tr></thead>
             <tbody>{rows.map((row) => {
               const isExpanded = expanded.has(row.id);
+              const StatusIcon = statusIcons[row.status];
               return <Fragment key={row.id}>
                 <tr id={`indicator-${row.id}`} tabIndex={0} aria-expanded={isExpanded} aria-controls={`details-${row.id}`} data-selected={selected?.id === row.id} data-status={row.status}
                   className={cn("cursor-pointer", row.service && "service-row")}
@@ -198,25 +200,29 @@ function Reconciliation({ check, version }: ResultProps) {
                   onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); toggleRow(row.id); } }}>
                   <td><div className="indicator-name">
                     <ChevronRight size={14} className={cn("shrink-0", isExpanded && "rotate-90")} />
-                    <span className="row-status" data-status={row.status} role="img" aria-label={statusLabels[row.status]} title={statusLabels[row.status]}>
-                      {row.status === "verified" ? <Check size={13} aria-hidden /> : row.status === "discrepancy" ? "!" : "−"}
-                    </span>
                     <button className="row-name-button" aria-pressed={selected?.id === row.id} aria-expanded={isExpanded} aria-controls={`details-${row.id}`} onClick={(event) => { event.stopPropagation(); toggleRow(row.id); }}>{row.name}</button>
                   </div><div className="indicator-meta"><span>{row.sources.length ? `${row.sources.length} док.` : "Нет источника"}</span>{row.manual && <span>Вручную</span>}{row.service && <span>Итоговая строка</span>}</div></td>
-                  <td>{row.unit ? <Measure value={row.reported} unit={row.unit} /> : <Money value={row.reported} />}</td>
-                  <td className="expected-cell"><Money value={row.expected} />
+                  <td><Measure value={row.reported} unit={row.unit} /></td>
+                  <td className="expected-cell"><Measure value={row.expected} unit={row.unit} />
                     {row.partialNote && <small>Частично подтверждено</small>}
                   </td>
                   <td className={cn("difference-cell", row.status === "discrepancy" && "delta-cell")}>
-                    <Money value={row.delta} />
+                    <Measure value={row.delta} unit={row.unit} />
                   </td>
+                  <td className="indicator-status-cell">
+                    <span className="row-status" data-status={row.status} role="img" tabIndex={0}
+                      aria-label={statusLabels[row.status]} onClick={(event) => event.stopPropagation()}>
+                      <StatusIcon size={14} aria-hidden="true" />
+                      <span className="indicator-status-label" aria-hidden="true">{statusLabels[row.status]}</span>
+                    </span>
+                  </td>
+                  <td className="indicator-explanation">{row.reason || (row.status === "verified" ? "Значение подтверждено документами" : "—")}</td>
                 </tr>
-                {isExpanded && <tr><td colSpan={4} className="!p-0 !text-left"><div id={`details-${row.id}`} role="region" aria-label={`Подробности: ${row.name}`} className="space-y-4 border-b bg-card p-5">
-                  {row.breakdown && <section aria-label={`В том числе: ${row.name}`}>
-                    <h3 className="mb-3 text-sm font-medium">В том числе — по КФЗ</h3>
-                    <BreakdownList items={row.breakdown} />
-                  </section>}
-                  <p className="text-sm"><strong>{statusLabels[row.status]}</strong>{row.reason && ` · ${row.reason}`}</p>
+                {isExpanded && <tr><td colSpan={6} className="!p-0 !text-left"><div id={`details-${row.id}`} role="region" aria-label={`Подробности: ${row.name}`} className="space-y-4 border-b bg-card p-5">
+                  {row.breakdown && <details>
+                    <summary className="cursor-pointer text-sm font-medium">В том числе — по КФЗ</summary>
+                    <section className="mt-3" aria-label={`В том числе: ${row.name}`}><BreakdownList items={row.breakdown} /></section>
+                  </details>}
                   <RowDocuments row={row} check={check} onOpen={(index, trigger) => openSource(row, index, trigger)} onExcluded={openExcluded} />
                   {row.partialNote && <p className="text-sm text-muted-foreground">{row.partialNote}</p>}
                   {row.status !== "verified" && (
@@ -225,7 +231,7 @@ function Reconciliation({ check, version }: ResultProps) {
                         <summary className="cursor-pointer font-medium">Возможные причины</summary>
                         <ul className="mt-1 list-disc space-y-1 pl-4">{row.causes.map((cause) => <li key={cause}>{cause}</li>)}</ul>
                       </details>}
-                      {row.recommendation && <p className="text-sm"><strong>Рекомендация</strong><br />{row.recommendation}</p>}
+                      {row.recommendation && row.recommendation !== row.reason && <p className="text-sm"><strong>Рекомендация</strong><br />{row.recommendation}</p>}
                     </>
                   )}
                 </div></td></tr>}

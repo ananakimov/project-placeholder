@@ -28,15 +28,15 @@ function ConclusionSummary({ check }: { check: Check }) {
         {discrepancies.map((row) => {
           const label = indicatorName(row.name).replace(/^статья /, "Статья ");
           if (row.delta === null || Number(row.delta) === 0) {
-            return sentence(`${label} — ${row.reason || "выявлено расхождение"}`);
+            return <span key={row.id}>{sentence(`${label} — ${row.reason || "выявлено расхождение"}`)}{' '}</span>;
           }
           const absolute = formatMoney(row.delta.replace(/^-/, ""));
           const direction = row.delta.startsWith("-") ? "ниже" : "выше";
-          const difference = `${label} — значение в КФЗ ${direction} подтверждённого на ${absolute} ${row.unit ?? "₽"}`;
-          return sentence(row.category && row.category !== "сумма" && row.reason
-            ? `${difference}. ${row.reason}`
-            : difference);
-        }).join(" ")}
+          return <span key={row.id}>
+            {label} — значение в КФЗ {direction} подтверждённого на <strong>{absolute} {row.unit ?? "₽"}</strong>.
+            {row.category && row.category !== "сумма" && row.reason && ` ${sentence(row.reason)}`}{' '}
+          </span>;
+        })}
       </p>}
       {(verified.length > 0 || unverified.length > 0) && <p>
         {verified.length > 0 && (check.conclusion === "Достоверен"
@@ -67,7 +67,7 @@ export function CheckConclusion({ check, children, version }: { check: Check; ch
   const total = counts.verified + counts.discrepancy + counts.unverified;
   const groups = [
     { label: "Подтверждено", count: counts.verified, sum: coverage.verifiedSum, pct: coverage.verifiedPct, theme: "verified" },
-    { label: "Расхождения", count: counts.discrepancy, sum: coverage.discrepancySum, pct: coverage.discrepancyPct, theme: "discrepancy" },
+    { label: "Строки с расхождениями", count: counts.discrepancy, sum: coverage.discrepancySum, pct: coverage.discrepancyPct, theme: "discrepancy" },
     { label: "Не проверено", count: counts.unverified, sum: coverage.unverifiedSum, pct: coverage.unverifiedPct, theme: "unverified" },
   ];
   const hasCoverage = Number(coverage.totalSum) > 0 && groups.every(({ pct }) =>
@@ -127,6 +127,7 @@ export function CheckConclusion({ check, children, version }: { check: Check; ch
         </div>
       </section>
       {children}
+      {check.synthetic && <p className="text-xs text-muted-foreground">Результат демонстрационной проверки</p>}
       <AcceptCheck check={check} version={version} />
     </div>
   );

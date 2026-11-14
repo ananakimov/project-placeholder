@@ -97,6 +97,7 @@ describe("Attached synthetic 2027 sample", () => {
     const payroll = g.rows.find((row) => row.id === "g-1")!;
     expect(screen.queryByRole("region", { name: `В том числе: ${payroll.name}` })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: payroll.name }));
+    fireEvent.click(screen.getByText("В том числе — по КФЗ", { exact: true }));
     const nested = screen.getByRole("region", { name: `В том числе: ${payroll.name}` });
     expect(within(nested).getByText("основная заработная плата")).toBeInTheDocument();
     expect(nested).toHaveTextContent(/4\s300\s000,00/);

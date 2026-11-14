@@ -149,7 +149,7 @@ describe("Reconciliation workspace", () => {
   it("shows missing evidence and recommendations in a source-less expanded row", () => {
     const g = checks.find((check) => check.id === "g")!;
     desk(g); const details = expand(g, "g-5");
-    expect(within(details).getByText(/не подтверждена отдельным расчётом/)).toBeInTheDocument();
+    expect(within(details.closest("tr")!.previousElementSibling as HTMLElement).getByText(/не подтверждена отдельным расчётом/)).toBeInTheDocument();
     expect(within(details).getByText("Рекомендация")).toBeInTheDocument();
     expect(screen.queryByLabelText(/Подсвеченный фрагмент/)).not.toBeInTheDocument();
   });

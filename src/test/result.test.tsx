@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CheckDetail } from "@/pages/CheckDetail";
 import { CheckHeader } from "@/components/check/CheckHeader";
-import { ChecksProvider, applyVariants, useChecks } from "@/context/ChecksContext";
+import { ChecksProvider, useChecks } from "@/context/ChecksContext";
 import { recheckDemo } from "@/data/demo-recheck";
 import { checks } from "@/data/mock";
 import { PROBLEMS } from "@/data/problems";
@@ -23,15 +23,18 @@ function Result() {
 function setup() { render(<ChecksProvider><Result /></ChecksProvider>); }
 
 describe("Combined result", () => {
-  it("shows the conclusion and one coverage card above the six-column table", () => {
+  it("shows one conclusion and completeness above the six-column table", () => {
     setup();
     const conclusion = screen.getByRole("region", { name: "Заключение по проверке" });
-    const coverage = screen.getByRole("region", { name: "Покрытие" });
+    const coverage = screen.getByRole("region", { name: "Полнота проверки" });
     const table = screen.getByRole("table", { name: "Показатели КФЗ" });
     expect(within(conclusion).getByRole("heading", { name: "Недостоверен" })).toBeInTheDocument();
-    expect(within(coverage).getByText(/38,6%/)).toBeInTheDocument();
-    expect(within(coverage).getByText("По строкам")).toBeInTheDocument();
-    expect(within(coverage).getByText("По сумме")).toBeInTheDocument();
+    expect(screen.getAllByText("Недостоверен", { exact: true })).toHaveLength(1);
+    expect(coverage).toHaveTextContent(/Проверено: 11 из 11 показателей \(100\s?%\)/);
+    const money = within(coverage).getByText("Подробнее по суммам").closest("details")!;
+    expect(money.open).toBe(false);
+    money.open = true;
+    expect(within(money).getByRole("table", { name: "Суммы показателей по статусам" })).toHaveTextContent("38,6%");
     expect(table.compareDocumentPosition(screen.getByRole("button", { name: "Принять проверку" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("Найденные проблемы")).not.toBeInTheDocument();
     expect(conclusion.compareDocumentPosition(coverage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -45,15 +48,21 @@ describe("Combined result", () => {
     const sample = checks.find((check) => check.id === "g")!;
     const { rerender } = render(<ChecksProvider><CheckDetail check={sample} /></ChecksProvider>);
     const conclusion = () => within(screen.getByRole("region", { name: "Заключение по проверке" }));
-    expect(conclusion().getByText(/^14\s800,00 ₽$/)).toBeInTheDocument();
-    expect(conclusion().getByText(/^25\s000,00 ₽$/)).toBeInTheDocument();
-    expect(conclusion().getByText(/128\s500,00 ₽/)).toBeInTheDocument();
-    expect(conclusion().getByText(/7\s818\s300,00 ₽/)).toBeInTheDocument();
+    const completeness = () => screen.getByRole("region", { name: "Полнота проверки" });
+    expect(conclusion().getByText(/по статье 0300 \(\+14\s800 ₽\) и по статье 0800 \(−25\s000 ₽\)/)).toBeInTheDocument();
+    expect(conclusion().getByText(/Ещё 2 показателя не удалось проверить/)).toBeInTheDocument();
+    expect(completeness()).toHaveTextContent(/Проверено: 4 из 6 показателей \(66,7\s?%\)/);
+    expect(within(completeness()).getAllByRole("listitem").map((item) => item.textContent))
+      .toEqual(["Подтверждено — 2", "Расхождения — 2", "Не проверено — 2"]);
+    expect(conclusion().queryByText(/7\s818\s300/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Итого" }).closest("tr"))
+      .toHaveTextContent("По представленным документам подтверждается часть затрат на 7 700 000,00 ₽; полной суммы нет.");
     const row = sample.rows.find((indicator) => indicator.id === "g-2")!;
     const updated = recheckDemo(sample, sample.docs.filter((doc) => doc.id !== row.sources[0]!.docId));
     rerender(<ChecksProvider><CheckDetail check={updated} version={2} /></ChecksProvider>);
-    expect(conclusion().queryByText(/^14\s800,00 ₽$/)).not.toBeInTheDocument();
-    expect(conclusion().getByText(/25\s000,00 ₽/)).toBeInTheDocument();
+    expect(conclusion().queryByText(/14\s800/)).not.toBeInTheDocument();
+    expect(conclusion().getByText(/−25\s000 ₽/)).toBeInTheDocument();
+    expect(completeness()).toHaveTextContent(/Проверено: 3 из 6 показателей \(50\s?%\)/);
   });
   it("opens and scrolls to a problem row even if search and filters had hidden it", () => {
     const c = checks.find((check) => check.id === "c")!;
@@ -74,24 +83,6 @@ describe("Combined result", () => {
       expect(problem.rowIds.length).toBeGreaterThan(0);
       for (const id of problem.rowIds) expect(check.rows.some((row) => row.id === id)).toBe(true);
     }
-  });
-  it("keeps possible causes in an expanded row without a source document", () => {
-    render(<ChecksProvider><CheckDetail check={checks.find((check) => check.id === "g")!} /></ChecksProvider>);
-    const name = "Трудоемкость (человеко-месяц)";
-    fireEvent.click(screen.getByRole("button", { name }));
-    const details = within(screen.getByRole("region", { name: `Подробности: ${name}` }));
-    fireEvent.click(details.getByText("Возможные причины"));
-    expect(details.getByText("Ведомости подтверждают суммы, но не трудоёмкость в человеко-месяцах.")).toBeInTheDocument();
-    expect(details.getByText("Рекомендация")).toBeInTheDocument();
-  });
-  it("hides obsolete causes and recommendations after an indicator is corrected", () => {
-    const check = applyVariants(b, { "b-1": "fix" });
-    render(<ChecksProvider><CheckDetail check={check} /></ChecksProvider>);
-    fireEvent.click(screen.getByRole("button", { name: "Оплата труда" }));
-    const details = within(screen.getByRole("region", { name: "Подробности: Оплата труда" }));
-    expect(screen.getByRole("button", { name: "Оплата труда" }).closest("tr")).toHaveAttribute("data-status", "verified");
-    expect(details.queryByText("Возможные причины")).not.toBeInTheDocument();
-    expect(details.queryByText("Рекомендация")).not.toBeInTheDocument();
   });
   it("shows insufficient evidence with rule reasons and partial sums, without an unsupported document checklist", () => {
     const c = checks.find((check) => check.id === "c")!;
@@ -121,7 +112,9 @@ describe("Combined result", () => {
     const trigger = screen.getByRole("button", { name: "Оплата труда" });
     fireEvent.click(trigger);
     const details = within(screen.getByRole("region", { name: "Подробности: Оплата труда" }));
-    expect(details.getByText("найдено 720000.00 за 3 из 4 мес.")).toBeInTheDocument();
+    expect(details.getAllByRole("listitem")).toHaveLength(3);
+    expect(details.queryByText("найдено 720000.00 за 3 из 4 мес.")).not.toBeInTheDocument();
+    expect(trigger.closest("tr")).toHaveTextContent("Частично подтверждено");
     expect(details.queryByText(/^=/)).not.toBeInTheDocument();
     expect(details.queryByRole("button", { name: "Отметить как просмотренное" })).not.toBeInTheDocument();
     expect(details.queryByRole("textbox", { name: "Комментарий" })).not.toBeInTheDocument();

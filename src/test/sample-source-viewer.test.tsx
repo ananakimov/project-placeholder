@@ -215,7 +215,9 @@ describe("Original example document pages", () => {
     const indicator = g.rows.find((row) => row.id === "g-4")!;
     fireEvent.click(screen.getByRole("button", { name: indicator.name }));
     const details = screen.getByRole("region", { name: `Подробности: ${indicator.name}` });
-    fireEvent.click(within(details).getByRole("button", { name: excluded.file }));
+    expect(within(details).queryByRole("button", { name: excluded.file })).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("region", { name: "Дополнительные проверки" }))
+      .getByRole("button", { name: excluded.file }));
     const panel = within(screen.getByRole("region", { name: "Источник документа" }));
     fireEvent.load(panel.getByRole("img"));
     expect(panel.getByLabelText(/Подсвеченный фрагмент: Дата/)).toBeInTheDocument();

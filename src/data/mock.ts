@@ -14,6 +14,7 @@ export type Row = {
   id: string; name: string; reported: string; expected: string | null; delta: string | null; status: Status;
   category: string | null; reason: string; ruleId: string; sources: SourceRef[]; partialNote?: string | undefined; manual?: boolean;
   causes?: string[];
+  evidenceDependencies?: string[];
   recommendation?: string;
   /** Служебная строка (арифметика/итог) — не входит в счётчики показателей. */
   service?: boolean;
@@ -26,7 +27,7 @@ export type Row = {
   breakdown?: Breakdown[];
 };
 export type Breakdown = { name: string; reported: string; note?: string; children?: Breakdown[] };
-export type Doc = { id: string; title: string; fileName?: string; type: string; number: string; date: string; contract: string; pages: number; previewPages?: { src: string; width: number; height: number }[]; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
+export type Doc = { id: string; demoUpload?: boolean; title: string; fileName?: string; type: string; number: string; date: string; contract: string; pages: number; previewPages?: { src: string; width: number; height: number }[]; state: "прочитан" | "дубль" | "вне периода" | "не прочитан" | "другой договор"; fields: { label: string; value: string; bbox: Bbox; page: number }[] };
 export type Check = {
   id: "a" | "b" | "c" | "g"; title: string; contract: string; period: string;
   reportRow?: string;
@@ -163,7 +164,7 @@ const checkB: Check = {
     row({
       causes: ["Один и тот же акт СП-27 повторно учтён в отчёте.", "Копия акта принята за отдельный документ."],
       recommendation: "Проверьте реквизиты акта СП-27 и исключите повторный учёт.",
-      id: "b-4", name: "Субподряд: этап 2.2", reported: "560000.00", expected: "280000.00", delta: "280000.00", status: "discrepancy", category: "дубль", ruleId: "R-DUP-01", reason: "Акт СП-27 учтён дважды: файл «Акт СП-27 (копия)» — дубль, в сумму не входит", sources: [src(bSp27, "280000.00")] }),
+      id: "b-4", evidenceDependencies: [bSp27c.id], name: "Субподряд: этап 2.2", reported: "560000.00", expected: "280000.00", delta: "280000.00", status: "discrepancy", category: "дубль", ruleId: "R-DUP-01", reason: "Акт СП-27 учтён дважды: файл «Акт СП-27 (копия)» — дубль, в сумму не входит", sources: [src(bSp27, "280000.00")] }),
     row({
       causes: ["В отчёт включены затраты за пределами периода этапа.", "В пакет приложен документ за другой период."],
       recommendation: "Представьте подтверждающий документ за период этапа или уточните период отражения затрат.",

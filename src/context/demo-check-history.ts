@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import type { Check } from "@/data/mock";
+import type { Check, Doc } from "@/data/mock";
+import { isKfz, recheckDemo } from "@/data/demo-recheck";
 
 const STORAGE_KEY = "doccheck.demo-check-history.v1";
 
 export type DemoCheckVersion = {
   number: number;
+  parentVersion?: number;
   createdAt: number;
   readyAt: number;
   acceptedAt: number | null;
@@ -20,8 +22,10 @@ function readHistory(): History | undefined {
     const value: unknown = JSON.parse(stored);
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return Object.fromEntries(Object.entries(value).filter(([id, versions]) =>
-      Array.isArray(versions) && versions.length > 0 && versions.every((version) =>
-        Number.isSafeInteger(version?.number) && Number.isFinite(version.createdAt) &&
+      Array.isArray(versions) && versions.length > 0 && versions.every((version, index) =>
+        version?.number === index + 1 && Number.isFinite(version.createdAt) &&
+        (version.parentVersion === undefined || (Number.isInteger(version.parentVersion) &&
+          version.parentVersion > 0 && version.parentVersion < version.number)) &&
         Number.isFinite(version.readyAt) && (version.acceptedAt === null || Number.isFinite(version.acceptedAt)) &&
         version.result?.id === id && Array.isArray(version.result.rows) && Array.isArray(version.result.docs),
       ),
@@ -97,7 +101,23 @@ export function useDemoCheckHistory() {
     });
   }
 
-  return { ready, now, versions, current, accept, update };
+  function recheck(check: Check, from: number, docs: readonly Doc[]) {
+    return update(check, (previous, time) => {
+      const version = previous.find((item) => item.number === from);
+      if (!version || version.readyAt > time || previous.some((item) => item.readyAt > time)) return null;
+      const report = version.result.docs.find(isKfz);
+      if (!report || docs.filter(isKfz).length !== 1 || !docs.some((doc) => doc.id === report.id) ||
+          new Set(docs.map((doc) => doc.id)).size !== docs.length) return null;
+      const oldIds = new Set(version.result.docs.map((doc) => doc.id));
+      if (docs.length === oldIds.size && docs.every((doc) => oldIds.has(doc.id))) return null;
+      const result = recheckDemo(version.result, docs);
+      result.date = new Intl.DateTimeFormat("ru-RU", { timeZone: "UTC" }).format(time);
+      return [...previous, { number: previous.length + 1, parentVersion: from,
+        createdAt: time, readyAt: time + 4_000, acceptedAt: null, result }];
+    });
+  }
+
+  return { ready, now, versions, current, accept, recheck };
 }
 
 export type DemoCheckHistory = ReturnType<typeof useDemoCheckHistory>;

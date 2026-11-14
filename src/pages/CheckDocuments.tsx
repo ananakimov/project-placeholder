@@ -26,7 +26,7 @@ const STATE_LABELS: Record<Doc["state"], string> = {
   "другой договор": "Другой договор",
   "не прочитан": "Не удалось прочитать",
 };
-export function CheckDocuments({ check }: { check: Check }) {
+export function CheckDocuments({ check, version }: { check: Check; version?: number }) {
   const [filter, setFilter] = useState<DocumentFilter>("all");
   const [open, setOpen] = useState<Doc | null>(null);
   const readCount = check.docs.filter((d) => d.state === "прочитан").length;
@@ -110,7 +110,7 @@ export function CheckDocuments({ check }: { check: Check }) {
                 <TableCell className="tabular-nums">{d.number}</TableCell>
                 <TableCell className="tabular-nums">{d.date}</TableCell>
                 <TableCell className="tabular-nums">{d.contract}</TableCell>
-                <TableCell className="tabular-nums">{d.pages}</TableCell>
+                <TableCell className="tabular-nums">{d.pages || "—"}</TableCell>
                 <TableCell>
                   <StatusLabel
                     plain={d.state !== "прочитан"}
@@ -121,7 +121,7 @@ export function CheckDocuments({ check }: { check: Check }) {
                           ? "discrepancy"
                           : "unverified"
                     }
-                    label={STATE_LABELS[d.state]}
+                    label={d.demoUpload ? "Демо · не распознан" : STATE_LABELS[d.state]}
                   />
                 </TableCell>
                 <TableCell className="tabular-nums text-muted-foreground">
@@ -132,6 +132,7 @@ export function CheckDocuments({ check }: { check: Check }) {
                           <Link
                             to="/checks/$id"
                             params={{ id: check.id }}
+                            search={version === undefined ? {} : { version }}
                             onClick={(e) => e.stopPropagation()}
                             className="text-primary hover:underline"
                           >

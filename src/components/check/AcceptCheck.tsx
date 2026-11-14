@@ -6,7 +6,7 @@ import type { Check as CheckData } from "@/data/mock";
 
 const acceptanceDate = new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" });
 
-export function AcceptCheck({ check, version = 1 }: { check: CheckData; version?: number }) {
+export function AcceptCheck({ check, version = 1 }: { check: CheckData; version?: number | undefined }) {
   const { checkHistory } = useChecks();
   const [error, setError] = useState(false);
   const acceptedAt = checkHistory.versions(check).find((item) => item.number === version)?.acceptedAt;

@@ -194,23 +194,6 @@ button:disabled {
 }
 .checks-section {
   background: white;
-  border-top: 1px solid var(--ui-line);
-}
-.section-heading {
-  padding: 26px 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px;
-}
-.section-heading h2 {
-  font-size: 21px;
-  font-weight: 500;
-}
-.section-heading h2 span {
-  font-size: 13px;
-  color: var(--ui-muted);
-  margin-left: 8px;
 }
 .legend {
   display: flex;
@@ -1687,15 +1670,6 @@ button:disabled {
   flex-shrink: 0;
   margin-top: 2px;
 }
-.reconcile-left-footer {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--ui-muted);
-  border-top: 1px solid var(--ui-line);
-  padding: 14px 18px;
-  flex-shrink: 0;
-}
 .reconcile-right {
   min-width: 0;
   min-height: 0;
@@ -2773,12 +2747,6 @@ kbd {
   .page-heading p {
     font-size: 13px;
   }
-  .section-heading {
-    padding: 20px 0;
-  }
-  .section-heading h2 {
-    font-size: 19px;
-  }
   .checks-toolbar {
     gap: 18px;
   }
@@ -2883,10 +2851,6 @@ kbd {
   }
   .reconcile-search {
     margin: 14px;
-  }
-  .reconcile-left-footer {
-    font-size: 10px;
-    padding: 14px;
   }
   .reconcile-right {
     height: 760px;
@@ -3073,40 +3037,11 @@ kbd {
   }
 }
 /* Keep source controls compact so the page gets the remaining height. */
-.compact-source .document-picker {
-  padding: 4px 8px;
-}
-.compact-source .document-tabs button {
-  min-height: 32px;
-  padding: 5px 10px;
-  gap: 6px;
-}
-.compact-source .source-context {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
-  border-bottom: 1px solid var(--ui-line);
-  flex-shrink: 0;
-}
-.compact-source .document-metadata {
-  order: -1;
+.compact-source > .document-viewer {
   flex: 1;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  width: 100%;
+  height: auto;
 }
-.compact-source .aggregation-note {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  white-space: nowrap;
-}
-.compact-source .aggregation-description,
 .compact-source .annotation-legend legend {
   position: absolute;
   width: 1px;
@@ -3122,12 +3057,14 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px 12px;
-  padding: 4px 12px;
+  gap: 2px 4px;
+  padding: 3px 7px;
   border-bottom: 1px solid var(--ui-line);
   background: white;
   flex-shrink: 0;
+}
+.compact-source .document-warning {
+  padding: 4px 10px;
 }
 .compact-source .annotation-legend {
   min-width: 0;
@@ -3135,19 +3072,29 @@ kbd {
   border: 0;
 }
 .compact-source .annotation-legend > div {
-  gap: 4px 12px;
+  gap: 0 3px;
 }
 .compact-source .annotation-legend label {
   min-height: 28px;
-  gap: 5px;
+  gap: 2px;
+  font-size: 11px;
 }
+.compact-source .annotation-checkbox { width: 14px; height: 14px; }
 .compact-source .document-toolbar {
-  flex: 1;
+  justify-content: start;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 2px 4px;
   padding: 0;
   border: 0;
   background: transparent;
+}
+.compact-source .document-toolbar button { width: 23px; }
+.compact-source .page-controls,
+.compact-source .zoom-controls { gap: 1px; font-size: 11px; white-space: nowrap; }
+.compact-source .zoom-controls > span { min-width: 32px; }
+@media (max-width: 700px) {
+  .compact-source .document-toolbar button { width: 28px; }
+  .compact-source .annotation-legend label { min-height: 32px; }
 }
 .compact-source .document-viewport {
   padding: 8px;
@@ -3237,6 +3184,9 @@ kbd {
 }
 
 .app-content { --source-rail-width: 64px; --source-panel-width: clamp(300px, 37vw, 600px); }
+@media (min-width: 1050px) {
+  .app-content { --source-panel-width: clamp(466px, 37vw, 600px); }
+}
 .app-content:has(.source-workspace) { margin-right: var(--source-rail-width); }
 .app-content:has(.source-workspace[data-source-open="true"]) {
   margin-right: calc(var(--source-rail-width) + var(--source-panel-width));
@@ -3271,11 +3221,6 @@ kbd {
   visibility: hidden;
   pointer-events: none;
 }
-.source-workspace-panel > .source-tabs {
-  flex: 1;
-  min-height: 0;
-  min-width: 0;
-}
 .source-document-select {
   display: flex;
   align-items: center;
@@ -3293,6 +3238,8 @@ kbd {
   padding: 5px 8px;
   font-size: 13px;
   background: white;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .source-document-select button {
   display: grid;
@@ -3303,25 +3250,6 @@ kbd {
 }
 .source-document-select button:disabled { opacity: .35; }
 .source-document-select button:not(:disabled):hover { background: var(--ui-selected); }
-.source-document-title {
-  flex-shrink: 0;
-  padding: 8px 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  font-weight: 500;
-  border-bottom: 1px solid var(--ui-line);
-}
-.source-indicator-name {
-  flex-shrink: 0;
-  overflow: hidden;
-  padding: 3px 12px;
-  color: var(--ui-secondary);
-  font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 @media (min-width: 1001px) {
   .source-workspace[data-source-open="true"] .reconcile-table td,
   .source-workspace[data-source-open="true"] .reconcile-table th { padding-inline: 8px; }
@@ -3382,6 +3310,7 @@ kbd {
 .row-status:hover .indicator-status-label,
 .row-status:focus .indicator-status-label { display: block; }
 
+.check-header-controls { padding-bottom: 6px; }
 .check-header-controls .check-tabs { padding-bottom: 0; }
 
 .queue-card { margin-top: 24px; padding: 20px; }

@@ -47,21 +47,15 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
   const ctx = useChecks();
   const navigate = useNavigate();
   const allChecks = override ?? ctx.checks;
-  const [acceptedFilter, setAcceptedFilter] = useState(false);
-  const showAccepted = archive || acceptedFilter;
   const activeResults = allChecks.map(ctx.checkHistory.current).filter((version) => version.acceptedAt === null);
   const pendingResults = allChecks.flatMap((check) => ctx.checkHistory.versions(check)
     .filter((version) => version.number > 1 && version.readyAt > ctx.checkHistory.now)
     .map((pending) => ({ pending, current: ctx.checkHistory.current(check) })));
-  const snapshots = showAccepted
+  const snapshots = archive
     ? allChecks.flatMap((check) => ctx.checkHistory.versions(check).filter((version) => version.acceptedAt !== null))
     : activeResults;
-  const checks = snapshots.map((snapshot) => snapshot.result);
-  const activeJobs = override ? [] : ctx.demoQueue.entries.filter((job) => !(job.complete && job.result));
-  const jobs = showAccepted ? [] : activeJobs;
-  const total = checks.length + jobs.length + (showAccepted ? 0 : pendingResults.length);
-  const acceptedCount = allChecks.reduce((count, check) => count + ctx.checkHistory.versions(check)
-    .filter((version) => version.acceptedAt !== null).length, 0);
+  const activeJobs = override || archive ? [] : ctx.demoQueue.entries.filter((job) => !job.complete && job.kind === "sample");
+  const total = snapshots.length + activeJobs.length + (archive ? 0 : pendingResults.length);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const results = snapshots.map((version) => ({
@@ -73,9 +67,9 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
   const entries = [
     ...results.filter(({ check, counts }) => matches(check, counts, filter) && matchesSearch(check))
       .map((result) => ({ id: result.check.id, time: result.version.createdAt, result })),
-    ...jobs.filter((job) => filter === "all" && demoJobName(job).toLocaleLowerCase("ru").includes(search))
+    ...activeJobs.filter((job) => filter === "all" && demoJobName(job).toLocaleLowerCase("ru").includes(search))
       .map((job) => ({ id: job.id, time: job.createdAt, job })),
-    ...pendingResults.filter(({ pending }) => !showAccepted && filter === "all" && matchesSearch(pending.result))
+    ...pendingResults.filter(({ pending }) => !archive && filter === "all" && matchesSearch(pending.result))
       .map(({ pending, current }) => ({ id: pending.result.id, time: pending.createdAt, pending, current })),
   ].sort((a, b) => b.time - a.time || a.id.localeCompare(b.id, "ru", { numeric: true }));
 
@@ -97,21 +91,16 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
         </div>
       </div>
       <div className="checks-section">
-        {!showAccepted && <div className="section-heading"><h2>Ваши проверки <span>{total}</span></h2></div>}
         <div className="checks-toolbar">
           <div className="filter-tabs" aria-label="Фильтры проверок">
             {!archive && (Object.keys(labels) as Filter[]).map((item) => (
-              <button key={item} type="button" onClick={() => { setAcceptedFilter(false); setFilter(item); }}
-                aria-pressed={!showAccepted && filter === item} className={cn(!showAccepted && filter === item && "active")}>
+              <button key={item} type="button" onClick={() => setFilter(item)}
+                aria-pressed={filter === item} className={cn(filter === item && "active")}>
                 {labels[item]}
                 <span>{activeResults.filter((version) => matches(version.result, countByStatus(version.result), item)).length +
                   (item === "all" ? activeJobs.length + pendingResults.length : 0)}</span>
               </button>
             ))}
-            {!archive && <button type="button" className={cn(showAccepted && "active")} aria-pressed={showAccepted}
-              onClick={() => { setAcceptedFilter(true); setFilter("all"); }}>
-              Приняты<span>{acceptedCount}</span>
-            </button>}
           </div>
           <div className="toolbar-inputs">
             <div className="search-wrap">
@@ -166,7 +155,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                   </tr>;
                 }
                 const { check, counts, version } = entry.result;
-                const versionNumber = showAccepted || version.number > 1 ? version.number : undefined;
+                const versionNumber = archive || version.number > 1 ? version.number : undefined;
                 const good = matches(check, counts, "verified");
                 const bad = counts.discrepancy > 0;
                 const status = good ? "Подтверждено" : bad ? "Есть расхождения" :
@@ -179,14 +168,12 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
                         <span className={cn("file-symbol", theme)}><FileSearch size={21} aria-hidden="true" /></span>
                         <div>
                           <Link to="/checks/$id" {...checkLocation(check.id, versionNumber)}>{checkName(check)}</Link>
-                          {check.createdAt !== undefined && <small>Демонстрация</small>}
-                          {versionNumber !== undefined && <small>Версия {versionNumber}</small>}
                           <small>Договор {check.contract}</small>
                           <small className="period">{check.period.replace("–", " — ")}</small>
                         </div>
                       </div>
                     </td>
-                    <td><span className={cn("result-chip", showAccepted ? "accepted" : theme)}><i aria-hidden />{showAccepted ? "Принят" : status}</span></td>
+                    <td><span className={cn("result-chip", archive ? "accepted" : theme)}><i aria-hidden />{archive ? "Принят" : status}</span></td>
                     <td>
                       <CoverageBar c={check.coverage} />
                       <small className="coverage-description">
@@ -203,7 +190,7 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
           {entries.length === 0 && (
             <div className="empty-checks">
               <FileSearch size={32} aria-hidden="true" />
-              <h3>{total ? "Проверки не найдены" : showAccepted ? "Принятых проверок пока нет" : "Здесь появятся ваши проверки"}</h3>
+              <h3>{total ? "Проверки не найдены" : archive ? "Принятых проверок пока нет" : "Здесь появятся ваши проверки"}</h3>
               {total > 0 && (
                 <Button variant="outline" onClick={() => { setQ(""); setFilter("all"); }}>
                   Сбросить фильтры

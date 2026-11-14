@@ -1,10 +1,8 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
-import { useState } from "react";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { SourceViewer } from "@/components/check/SourceViewer";
-import { SidePanel } from "@/components/check/SidePanel";
 import { fieldSource } from "@/components/check/document-annotations";
 import { CheckDetail } from "@/pages/CheckDetail";
 import { ChecksProvider } from "@/context/ChecksContext";
@@ -26,22 +24,9 @@ const first = g.docs.find((doc) => doc.id === production.sources[0]!.docId)!;
 
 function productionViewer() {
   return render(
-    <SourceViewer row={production} source={production.sources[0]!} doc={first} />,
+    <SourceViewer source={production.sources[0]!} doc={first} />,
   );
 }
-function Panel() {
-  const [index, setIndex] = useState(0);
-  return (
-    <SidePanel
-      check={g}
-      row={production}
-      sourceIndex={index}
-      onSourceChange={setIndex}
-      sources={production.sources}
-    />
-  );
-}
-
 describe("Original example document pages", () => {
   it("bundles all 23 input files' pages with matching original hashes and real WebP dimensions", () => {
     expect(
@@ -84,7 +69,7 @@ describe("Original example document pages", () => {
       const amount = doc.fields.find((field) => field.label === "Сумма")!;
       const source = fieldSource(doc, amount);
       const { container, unmount } = render(
-        <SourceViewer row={production} source={source} doc={doc} />,
+        <SourceViewer source={source} doc={doc} />,
       );
       const img = screen.getByRole("img", { name: `${doc.fileName}, страница 1` });
       expect(img).toHaveAttribute("src", doc.previewPages![0]!.src);
@@ -105,30 +90,33 @@ describe("Original example document pages", () => {
     }
   });
 
-  it("switches the actual page, amount and highlight through document arrows and tabs", () => {
-    render(<Panel />);
-    expect(screen.getByRole("button", { name: "Предыдущий документ" })).toBeDisabled();
-    for (let i = 0; i < production.sources.length; i++) {
-      const source = production.sources[i]!;
+  it("navigates the whole package from the same selector when an indicator is selected", () => {
+    render(<ChecksProvider><CheckDetail check={g} /></ChecksProvider>);
+    fireEvent.click(screen.getByRole("button", { name: production.name }));
+    const details = screen.getByRole("region", { name: `Подробности: ${production.name}` });
+    fireEvent.click(within(details).getByRole("button", { name: `Открыть документ: ${first.title}` }));
+    const panel = within(screen.getByRole("region", { name: "Источник документа" }));
+    const picker = panel.getByRole("combobox", { name: "Документы комплекта" });
+    expect(within(picker).getAllByRole("option")).toHaveLength(g.docs.length);
+    expect(picker).toHaveValue(first.id);
+    expect(panel.queryByRole("heading")).not.toBeInTheDocument();
+    expect(panel.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(panel.queryByLabelText("Реквизиты документа")).not.toBeInTheDocument();
+    const previous = g.docs[g.docs.indexOf(first) - 1]!;
+    fireEvent.click(panel.getByRole("button", { name: "Предыдущий документ" }));
+    expect(picker).toHaveValue(previous.id);
+    fireEvent.click(panel.getByRole("button", { name: "Следующий документ" }));
+    expect(picker).toHaveValue(first.id);
+    for (const source of production.sources) {
       const doc = g.docs.find((item) => item.id === source.docId)!;
-      const img = screen.getByRole("img", { name: `${doc.fileName}, страница 1` });
-      expect(img).toHaveAttribute("src", doc.previewPages![0]!.src);
-      fireEvent.load(img);
-      expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toHaveAttribute(
-        "aria-label",
-        `Подсвеченный фрагмент: ${source.text}`,
+      fireEvent.change(picker, { target: { value: doc.id } });
+      const image = panel.getByRole("img", { name: `${doc.fileName}, страница 1` });
+      expect(image).toHaveAttribute("src", doc.previewPages![0]!.src);
+      fireEvent.load(image);
+      expect(panel.getByLabelText(/Подсвеченный фрагмент:/)).toHaveAttribute(
+        "aria-label", `Подсвеченный фрагмент: ${source.text}`,
       );
-      expect(screen.getByLabelText("Реквизиты документа")).toHaveTextContent(doc.number);
-      if (i < production.sources.length - 1)
-        fireEvent.click(screen.getByRole("button", { name: "Следующий документ" }));
     }
-    expect(screen.getByRole("button", { name: "Следующий документ" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Предыдущий документ" }));
-    expect(screen.getByRole("img")).toHaveAccessibleName(/06_Служебная_записка_КЛ-84.docx/);
-    fireEvent.keyDown(screen.getByRole("tab", { name: `${first.title}, источник 1` }), {
-      key: "Enter",
-    });
-    expect(screen.getByRole("img")).toHaveAttribute("src", first.previewPages![0]!.src);
   });
 
   it("centers after the image loads, scales the whole page and preserves annotation controls", () => {
@@ -145,7 +133,7 @@ describe("Original example document pages", () => {
     expect(screen.getByLabelText(/Распознанное поле: Дата:/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
     expect(screen.getByLabelText(/Подсвеченный фрагмент:/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Скрыть подсветку" }));
+    for (const checkbox of screen.getAllByRole("checkbox", { name: /^Подсветка:/ })) fireEvent.click(checkbox);
     expect(screen.queryByLabelText(/Распознанное поле:/)).not.toBeInTheDocument();
     expect(screen.getByRole("img")).toBeInTheDocument();
   });
@@ -188,9 +176,10 @@ describe("Original example document pages", () => {
     fireEvent.click(within(details).getByRole("button", { name: `Открыть документ: ${first.title}` }));
     const panel = screen.getByRole("region", { name: "Источник документа" });
     const viewer = within(panel);
-    fireEvent.click(viewer.getByRole("button", { name: "Следующий документ" }));
+    const picker = viewer.getByRole("combobox", { name: "Документы комплекта" });
     const secondSource = production.sources[1]!;
     const second = g.docs.find((doc) => doc.id === secondSource.docId)!;
+    fireEvent.change(picker, { target: { value: second.id } });
     const image = viewer.getByRole("img");
     fireEvent.load(image);
     fireEvent.click(viewer.getByRole("button", { name: "Увеличить масштаб" }));
@@ -209,13 +198,15 @@ describe("Original example document pages", () => {
     expect(viewer.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
     expect(viewer.getByRole("checkbox", { name: "Подсветка: Даты" })).not.toBeChecked();
 
-    fireEvent.click(viewer.getByRole("button", { name: "Следующий документ" }));
+    fireEvent.change(picker, { target: { value: production.sources[2]!.docId } });
     fireEvent.load(viewer.getByRole("img"));
     expect(viewer.getByRole("img")).toHaveAccessibleName(/06_Служебная_записка_КЛ-84.docx/);
     expect(viewer.getByLabelText(/Подсвеченный фрагмент:/)).toHaveAttribute("aria-label", `Подсвеченный фрагмент: ${production.sources[2]!.text}`);
-    fireEvent.click(viewer.getByRole("button", { name: "Предыдущий документ" }));
+    fireEvent.change(picker, { target: { value: second.id } });
     fireEvent.load(viewer.getByRole("img"));
     expect(viewer.getByRole("img")).toHaveAttribute("src", second.previewPages![0]!.src);
+    expect(viewer.getByLabelText("Масштаб документа")).toHaveTextContent("125%");
+    expect(viewer.getByRole("checkbox", { name: "Подсветка: Даты" })).not.toBeChecked();
   });
 
   it("opens an excluded file at its recorded date field instead of the document amount", () => {

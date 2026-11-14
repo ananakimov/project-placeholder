@@ -16,7 +16,7 @@ export function ExcludedDocs({ check, onSource }: {
       <Table className="text-[13px]">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            {["Файл", "Причина", "Сумма, ₽", "Влияние"].map((h, i) => <TableHead key={h} className={i === 2 ? "h-9 text-right text-[12px] font-medium text-muted-foreground" : "h-9 text-[12px] font-medium text-muted-foreground"}>{h}</TableHead>)}
+            {["Файл", "Статус", "Сумма, ₽", "Причина"].map((h, i) => <TableHead key={h} className={i === 2 ? "h-9 text-right text-[12px] font-medium text-muted-foreground" : "h-9 text-[12px] font-medium text-muted-foreground"}>{h}</TableHead>)}
           </TableRow>
         </TableHeader>
         <TableBody>

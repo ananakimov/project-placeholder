@@ -70,7 +70,7 @@ describe("Document state filters", () => {
     const panel = within(screen.getByRole("region", { name: "Источник документа" }));
     const image = panel.getByRole("img", { name: /Акт_284/ });
     fireEvent.load(image);
-    expect(panel.getByLabelText("Реквизиты документа")).toHaveTextContent("284");
+    expect(panel.getByRole("combobox", { name: "Документы комплекта" })).toHaveValue(g.docs.find((doc) => doc.number === "284")!.id);
     expect(panel.getByLabelText(/Подсвеченный фрагмент/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Скрыть источник документа" }));
     fireEvent.click(screen.getByRole("button", { name: "Показать источник документа" }));

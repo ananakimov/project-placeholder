@@ -103,8 +103,7 @@ describe("Versioned demo package", () => {
       ["Заменяющий акт.pdf", "Дополнение.xlsx"],
     ));
     expect(current.result.docs.map((doc: { id: string }) => doc.id)).not.toContain(source.id);
-    fireEvent.click(screen.getByRole("button", { name: "Приняты 1" }));
-    expect(screen.getByRole("link", { name: "КФЗ №3/7" })).toHaveAttribute("href", "/checks/g?version=1");
+    expect(screen.queryByRole("button", { name: /^Приняты/ })).not.toBeInTheDocument();
 
     cleanup();
     render(<ChecksProvider><Workflow archive /></ChecksProvider>);

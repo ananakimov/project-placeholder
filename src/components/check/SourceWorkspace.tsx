@@ -3,18 +3,17 @@ import { ChevronLeft, ChevronRight, Eye, EyeOff } from "lucide-react";
 import type { Check, Doc, Row, SourceRef } from "@/data/mock";
 import { cn } from "@/lib/utils";
 import { isKfz } from "@/data/demo-recheck";
-import { DocumentFields } from "./DocumentFields";
-import { SidePanel } from "./SidePanel";
 import { SourceViewer } from "./SourceViewer";
 import { fieldSource } from "./document-annotations";
 
-type Evidence = { row: Row | undefined; sources: readonly SourceRef[]; index: number };
+type Evidence = { row: Row | undefined; sources: readonly SourceRef[]; index: number; request: number };
 
 export function useSourceWorkspace(check: Check) {
   const [panelOpen, setPanelOpen] = useState(false);
   const reportId = check.docs.find(isKfz)?.id ?? "";
   const [docId, setDocId] = useState(reportId);
   const [evidence, setEvidence] = useState<Evidence | null>(null);
+  const request = useRef(0);
   const eye = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
 
@@ -23,7 +22,7 @@ export function useSourceWorkspace(check: Check) {
     if (!source) return;
     returnFocus.current = trigger;
     setDocId(source.docId);
-    setEvidence({ row, sources, index });
+    setEvidence({ row, sources, index, request: ++request.current });
     setPanelOpen(true);
     requestAnimationFrame(() => eye.current?.focus({ preventScroll: true }));
   }
@@ -81,14 +80,7 @@ export function useSourceWorkspace(check: Check) {
     });
   }
 
-  function selectSource(index: number) {
-    const source = evidence?.sources[index];
-    if (!evidence || !source) return;
-    setDocId(source.docId);
-    setEvidence({ ...evidence, index });
-  }
-
-  return { panelOpen, docId, evidence, eye, openEvidence, openDocument, close, toggle, clearEvidence, selectDocument, selectSource };
+  return { panelOpen, docId, evidence, eye, openEvidence, openDocument, close, toggle, clearEvidence, selectDocument };
 }
 
 export function SourceWorkspace({ check, workspace }: {
@@ -97,11 +89,10 @@ export function SourceWorkspace({ check, workspace }: {
 }) {
   const panelId = useId();
   const panel = useRef<HTMLElement>(null);
-  const { docId, panelOpen, evidence, eye, toggle, selectDocument, selectSource } = workspace;
+  const { docId, panelOpen, evidence, eye, toggle, selectDocument } = workspace;
   const docIndex = check.docs.findIndex((item) => item.id === docId);
   const doc = check.docs[docIndex];
-  const activeEvidence = evidence?.sources[evidence.index]?.docId === docId ? evidence : null;
-  const indicatorNavigation = (activeEvidence?.sources.length ?? 0) > 1;
+  const source = evidence?.sources[evidence.index];
   const PaneIcon = panelOpen ? Eye : EyeOff;
 
   useEffect(() => {
@@ -122,26 +113,17 @@ export function SourceWorkspace({ check, workspace }: {
     <section ref={panel} id={panelId} aria-label="Источник документа" data-print-hide
       className="source-workspace-panel compact-source" inert={!panelOpen} aria-hidden={!panelOpen}>
       {check.docs.length > 0 && <div className="source-document-select">
-        {!indicatorNavigation && <button type="button" aria-label="Предыдущий документ" disabled={docIndex <= 0}
-          onClick={() => selectDocument(check.docs[docIndex - 1]!.id)}><ChevronLeft size={16} aria-hidden /></button>}
-        <select aria-label="Документы комплекта" value={docId} onChange={(event) => selectDocument(event.target.value)}>
+        <button type="button" aria-label="Предыдущий документ" disabled={docIndex <= 0}
+          onClick={() => selectDocument(check.docs[docIndex - 1]!.id)}><ChevronLeft size={16} aria-hidden /></button>
+        <select aria-label="Документы комплекта" title={doc?.title} value={docId} onChange={(event) => selectDocument(event.target.value)}>
           {!doc && <option value="" disabled>Выберите документ</option>}
           {check.docs.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
-        {!indicatorNavigation && <button type="button" aria-label="Следующий документ" disabled={docIndex >= check.docs.length - 1}
-          onClick={() => selectDocument(check.docs[docIndex + 1]!.id)}><ChevronRight size={16} aria-hidden /></button>}
+        <button type="button" aria-label="Следующий документ" disabled={docIndex >= check.docs.length - 1}
+          onClick={() => selectDocument(check.docs[docIndex + 1]!.id)}><ChevronRight size={16} aria-hidden /></button>
       </div>}
-      {activeEvidence ? (
-        <SidePanel check={check} row={activeEvidence.row} sources={activeEvidence.sources}
-          sourceIndex={activeEvidence.index} onSourceChange={selectSource} />
-      ) : doc ? (
-        <div className="source-tabs">
-          <h3 className="source-document-title" title={doc.title}>{doc.title}</h3>
-          <div className="source-context"><DocumentFields doc={doc} /></div>
-          <div className="source-document-content">
-            <SourceViewer source={null} doc={doc} />
-          </div>
-        </div>
+      {doc ? (
+        <SourceViewer doc={doc} source={source?.docId === docId ? source : null} request={evidence?.request ?? 0} />
       ) : <p className="source-empty-state">Исходный КФЗ отсутствует в комплекте.</p>}
     </section>
   </>;

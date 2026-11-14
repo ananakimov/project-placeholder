@@ -127,7 +127,6 @@ export function CheckConclusion({ check, children, version }: { check: Check; ch
         </div>
       </section>
       {children}
-      {check.synthetic && <p className="text-xs text-muted-foreground">Результат демонстрационной проверки</p>}
       <AcceptCheck check={check} version={version} />
     </div>
   );

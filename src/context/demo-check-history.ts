@@ -6,6 +6,7 @@ const STORAGE_KEY = "doccheck.demo-check-history.v1";
 
 export type DemoCheckVersion = {
   number: number;
+  parentVersion?: number;
   createdAt: number;
   readyAt: number;
   acceptedAt: number | null;
@@ -23,6 +24,8 @@ function readHistory(): History | undefined {
     return Object.fromEntries(Object.entries(value).filter(([id, versions]) =>
       Array.isArray(versions) && versions.length > 0 && versions.every((version, index) =>
         version?.number === index + 1 && Number.isFinite(version.createdAt) &&
+        (version.parentVersion === undefined || (Number.isInteger(version.parentVersion) &&
+          version.parentVersion > 0 && version.parentVersion < version.number)) &&
         Number.isFinite(version.readyAt) && (version.acceptedAt === null || Number.isFinite(version.acceptedAt)) &&
         version.result?.id === id && Array.isArray(version.result.rows) && Array.isArray(version.result.docs),
       ),
@@ -109,7 +112,7 @@ export function useDemoCheckHistory() {
       if (docs.length === oldIds.size && docs.every((doc) => oldIds.has(doc.id))) return null;
       const result = recheckDemo(version.result, docs);
       result.date = new Intl.DateTimeFormat("ru-RU", { timeZone: "UTC" }).format(time);
-      return [...previous, { number: previous.length + 1,
+      return [...previous, { number: previous.length + 1, parentVersion: from,
         createdAt: time, readyAt: time + 4_000, acceptedAt: null, result }];
     });
   }

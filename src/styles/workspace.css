@@ -3192,6 +3192,46 @@ kbd {
 .app-sidebar .brand-symbol,
 .app-sidebar .nav-item svg { flex-shrink: 0; }
 
+.app-sidebar .sidebar-mobile-trigger { display: none; }
+
+@media (min-width: 701px) {
+  .app-sidebar {
+    width: 64px;
+    overflow: hidden;
+    transition: width 175ms ease, box-shadow 175ms ease;
+  }
+  .app-content { margin-left: 64px; }
+  .app-sidebar .brand,
+  .app-sidebar .nav-item { min-width: 220px; padding-inline: 16px; white-space: nowrap; }
+  .app-sidebar .nav-item { padding-left: 21px; }
+  .app-sidebar .brand-name,
+  .app-sidebar .nav-item span { opacity: 0; transition: opacity 175ms ease; }
+  .app-sidebar:has(:focus-visible) { width: 220px; box-shadow: 4px 0 16px #16373517; }
+  .app-sidebar:has(:focus-visible) :is(.brand-name, .nav-item span) { opacity: 1; }
+}
+@media (min-width: 701px) and (hover: hover) {
+  .app-sidebar:hover { width: 220px; box-shadow: 4px 0 16px #16373517; }
+  .app-sidebar:hover :is(.brand-name, .nav-item span) { opacity: 1; }
+}
+@media (min-width: 701px) and (hover: none) {
+  .app-sidebar > .brand:not(.sidebar-mobile-trigger) { display: none; }
+  .app-sidebar .sidebar-mobile-trigger { display: flex; }
+  .app-sidebar[data-mobile-open="true"] { width: 220px; box-shadow: 4px 0 16px #16373517; }
+  .app-sidebar[data-mobile-open="true"] :is(.brand-name, .nav-item span) { opacity: 1; }
+  .app-sidebar:not([data-mobile-open="true"]) :is(.brand-name, .nav-item span) { opacity: 0; }
+  .app-sidebar:not([data-mobile-open="true"]):has(.sidebar-mobile-trigger:focus-visible) { width: 64px; box-shadow: none; }
+}
+@media (max-width: 700px) {
+  .app-sidebar { padding-bottom: 12px; }
+  .app-sidebar > .brand:not(.sidebar-mobile-trigger) { display: none; }
+  .app-sidebar .sidebar-mobile-trigger { display: flex; }
+  .app-sidebar > nav { display: none; }
+  .app-sidebar[data-mobile-open="true"] > nav { display: flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-sidebar, .app-sidebar :is(.brand-name, .nav-item span) { transition: none; }
+}
+
 .app-content { --source-rail-width: 64px; --source-panel-width: clamp(350px, 36vw, 600px); }
 .app-content:has(.source-workspace) { margin-right: var(--source-rail-width); }
 .app-content:has(.source-workspace[data-source-open="true"]) {

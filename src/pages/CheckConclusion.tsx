@@ -67,7 +67,7 @@ export function CheckConclusion({ check, children, version }: { check: Check; ch
   const total = counts.verified + counts.discrepancy + counts.unverified;
   const groups = [
     { label: "Подтверждено", count: counts.verified, sum: coverage.verifiedSum, pct: coverage.verifiedPct, theme: "verified" },
-    { label: "Расхождения", count: counts.discrepancy, sum: coverage.discrepancySum, pct: coverage.discrepancyPct, theme: "discrepancy" },
+    { label: "Строки с расхождениями", count: counts.discrepancy, sum: coverage.discrepancySum, pct: coverage.discrepancyPct, theme: "discrepancy" },
     { label: "Не проверено", count: counts.unverified, sum: coverage.unverifiedSum, pct: coverage.unverifiedPct, theme: "unverified" },
   ];
   const hasCoverage = Number(coverage.totalSum) > 0 && groups.every(({ pct }) =>
@@ -111,7 +111,7 @@ export function CheckConclusion({ check, children, version }: { check: Check; ch
               <tbody>
                 {groups.map(({ label, count, sum, pct, theme }) => (
                   <tr key={theme}>
-                    <th scope="row" title={theme === "discrepancy" ? "Сумма строк с расхождениями" : undefined} className={cn("py-0.5 text-left font-normal", {
+                    <th scope="row" className={cn("py-0.5 text-left font-normal", {
                       "text-verified": theme === "verified",
                       "text-discrepancy": theme === "discrepancy",
                       "text-unverified": theme === "unverified",

@@ -43,7 +43,8 @@ describe("Single accountant workflow", () => {
     expect(within(sidebar).queryByText("АИ", { exact: true })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Проверка КФЗ №b");
     expect(screen.getByText("2 этап, 2026 г.")).toBeInTheDocument();
-    expect(screen.getByText("Пример", { exact: true })).toBeInTheDocument();
+    expect(screen.queryByText("Пример", { exact: true })).not.toBeInTheDocument();
+    expect(screen.getByText("Результат демонстрационной проверки")).toBeInTheDocument();
     expect(screen.getByText("Договор СИН-2026/12 · Период 01.06.2026–30.09.2026")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Роль пользователя" })).not.toBeInTheDocument();
     expect(screen.queryByText("Аспирант")).not.toBeInTheDocument();

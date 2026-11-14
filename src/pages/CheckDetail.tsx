@@ -97,6 +97,7 @@ function Reconciliation({ check, version }: ResultProps) {
       <SourceWorkspace check={check} workspace={workspace} />
       <section className="source-workspace-table min-w-0 bg-card" aria-label="Рабочее место сверки">
         <h2 className="py-3 text-lg font-medium">Показатели отчёта</h2>
+        {check.rows.length > 0 && <>
         <div className="reconcile-filters !mx-0" aria-label="Статус показателя">
           {filters.map((item) => <button key={item.value} aria-pressed={filter === item.value} className={cn(filter === item.value && "active", item.value)} onClick={() => setFilter(item.value)}>{item.label}<span>{item.count}</span></button>)}
         </div>
@@ -148,6 +149,8 @@ function Reconciliation({ check, version }: ResultProps) {
           </table>
         </div>
         {!rows.length && <div className="reconcile-empty"><Search size={25} /><strong>Показатели не найдены</strong><p>Измените запрос или выберите другой статус.</p><button onClick={() => { setQuery(""); setFilter("all"); }}>Сбросить фильтры</button></div>}
+        </>}
+        {!check.rows.length && <p className="text-sm text-muted-foreground">Показатели КФЗ недоступны.</p>}
       </section>
       </div>
       <AdditionalChecks check={check} version={version} onExcluded={openExcluded} onDiagnostic={openDiagnostic} onIndicator={(id) => {

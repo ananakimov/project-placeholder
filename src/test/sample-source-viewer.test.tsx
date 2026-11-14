@@ -155,6 +155,15 @@ describe("Original example document pages", () => {
     for (let i = 0; i < 7; i++) fireEvent.click(zoomIn);
     expect(screen.getByLabelText("Масштаб документа")).toHaveTextContent("275%");
     expect(zoomIn).toBeDisabled();
+    fireEvent.load(screen.getByRole("img"));
+    const documentAmount = screen.getByLabelText(/Распознанное поле: Сумма:/);
+    expect(screen.queryByLabelText(/Подсвеченный фрагмент:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Подсветка: Суммы" }));
+    fireEvent.click(screen.getByRole("button", { name: "К сумме" }));
+    expect(screen.getByRole("checkbox", { name: "Подсветка: Суммы" })).toBeChecked();
+    const mark = screen.getByLabelText(/Подсвеченный фрагмент: Сумма:/);
+    expect(mark.getAttribute("style")).toEqual(documentAmount.getAttribute("style"));
+    expect(HTMLElement.prototype.scrollTo).toHaveBeenCalled();
   });
 
   it("shows a retry state instead of a fabricated page or floating highlights when loading fails", () => {

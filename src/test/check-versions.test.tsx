@@ -82,7 +82,10 @@ describe("Versioned demo package", () => {
     fireEvent.click(within(editor).getByRole("button", { name: "Запустить повторную проверку" }));
 
     expect(screen.getByText(/Версия 2 в обработке/)).toBeInTheDocument();
-    expect(screen.getByRole("combobox", { name: "Версия" })).toHaveValue("1");
+    const versions = screen.getByRole("combobox", { name: "Версия" });
+    expect(versions).toHaveValue("1");
+    expect(within(versions).getAllByRole("option").map((option) => option.textContent)).toEqual(["Версия 2", "Версия 1"]);
+    expect(within(versions).getByRole("option", { name: "Версия 2" })).toBeDisabled();
     const pending = screen.getByRole("row", { name: /КФЗ №3\/7 · Версия 2/ });
     expect(within(pending).getByText("Обрабатывается")).toBeInTheDocument();
     expect(within(pending).getByRole("link", { name: "Предыдущая версия" })).toHaveAttribute("href", "/checks/g?version=1");
@@ -110,5 +113,41 @@ describe("Versioned demo package", () => {
     expect(screen.getByRole("link", { name: "КФЗ №3/7" })).toHaveAttribute("href", "/checks/g?version=1");
     expect(screen.getByRole("combobox", { name: "Версия" })).toHaveValue("2");
     expect(getCheck("g")).toEqual(previous.result);
+  });
+
+  it("replaces the report with one PDF without carrying prior results into the new version", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-14T12:00:00Z"));
+    render(<ChecksProvider><Workflow /></ChecksProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Изменить комплект" }));
+    const editor = within(screen.getByRole("dialog", { name: "Изменить комплект" }));
+    const input = editor.getByLabelText("Файлы комплекта");
+    const submit = editor.getByRole("button", { name: "Запустить повторную проверку" });
+    fireEvent.click(editor.getByRole("button", { name: "Заменить КФЗ" }));
+    expect(input).toHaveAttribute("accept", ".pdf");
+    expect(input).not.toHaveAttribute("multiple");
+    fireEvent.change(input, { target: { files: [new File(["fixture"], "Неверный формат.xlsx")] } });
+    expect(editor.getByRole("alert")).toHaveTextContent("Поддерживаются: PDF");
+    expect(submit).toBeDisabled();
+    fireEvent.change(input, { target: { files: [new File(["fixture"], "Новый КФЗ.PDF")] } });
+    expect(editor.getByText("Новый КФЗ.PDF")).toBeInTheDocument();
+    expect(editor.queryByRole("button", { name: "Исключить Новый КФЗ.PDF" })).not.toBeInTheDocument();
+    fireEvent.click(submit);
+    expect(JSON.parse(screen.getByTestId("current").textContent!).result).toEqual(base);
+
+    act(() => { vi.advanceTimersByTime(4_250); });
+    const { result } = JSON.parse(screen.getByTestId("current").textContent!);
+    expect(result).toMatchObject({
+      kfzNumber: "", contract: "", period: "", reportRow: "", rows: [], excluded: [],
+      conclusion: "Подтвердить полностью нельзя", coverage: { totalSum: "", verifiedPct: "" },
+    });
+    expect(result.docs).toHaveLength(base.docs.length);
+    expect(result.docs.filter((doc: { type: string }) => doc.type === "КФЗ")).toEqual([
+      expect.objectContaining({ title: "Новый КФЗ.PDF", fields: [], state: "не прочитан", demoUpload: true }),
+    ]);
+    expect(result.docs.map((doc: { id: string }) => doc.id)).not.toContain("g-kfz");
+    const listed = screen.getByRole("link", { name: "Проверка КФЗ №g" }).closest("tr")!;
+    expect(within(listed).getByRole("cell", { name: "Неполные данные" })).toBeInTheDocument();
+    expect(within(listed).getByRole("cell", { name: "Покрытие отсутствует" })).toHaveTextContent("—");
   });
 });

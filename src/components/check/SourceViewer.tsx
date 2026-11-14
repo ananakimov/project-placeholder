@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertOctagon,
   ChevronLeft,
@@ -16,6 +16,7 @@ import { formatMoney } from "@/components/money-format";
 import {
   annotationKind,
   annotationTypes,
+  fieldSource,
   isSourceField,
   type AnnotationKind,
 } from "./document-annotations";
@@ -61,30 +62,39 @@ type DocumentView = {
   enabledKinds: Set<AnnotationKind>;
 };
 
-function Viewer({ source, doc, request, views }: {
+function Viewer({ source: selectedSource, doc, request, views }: {
   source: SourceRef | null;
   doc: Doc;
   request: number;
   views: Map<string, DocumentView>;
 }) {
   const saved = views.get(doc.id);
-  const [page, setPage] = useState(saved?.page ?? source?.page ?? 1);
+  const [page, setPage] = useState(saved?.page ?? selectedSource?.page ?? 1);
   const [zoom, setZoom] = useState(saved?.zoom ?? 100);
   const [enabledKinds, setEnabledKinds] = useState(
     () => saved?.enabledKinds ?? new Set<AnnotationKind>(annotationTypes.map((type) => type.kind)),
   );
   const [locate, setLocate] = useState(0);
+  const [amountTarget, setAmountTarget] = useState(false);
   const [loadedImage, setLoadedImage] = useState<string | null>(null);
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const mark = useRef<HTMLDivElement>(null);
+  const image = useRef<HTMLImageElement>(null);
   const readable = doc.state !== "не прочитан";
+  const amountSource = useMemo(() => {
+    const field = doc.fields.find((entry) => entry.label === "Сумма");
+    return field ? fieldSource(doc, field) : null;
+  }, [doc]);
+  const source = selectedSource ?? (amountTarget ? amountSource : null);
+  const target = source ?? amountSource;
   const pageImage = doc.previewPages?.[page - 1];
   const maxZoom = pageImage && pageImage.width > pageImage.height ? 275 : 175;
   const imageFailed = Boolean(pageImage && failedImage === pageImage.src);
   const pageReady = !pageImage || (loadedImage === pageImage.src && !imageFailed);
   const sourceField = source && doc.fields.find((field) => isSourceField(field, source));
   const sourceAmount = sourceField && annotationKind(sourceField.label) !== "money" ? null : source?.amount;
+  const targetAmount = source ? sourceAmount : target?.amount;
   const sourceKind = sourceField
     ? annotationKind(sourceField.label)
     : source?.amount
@@ -93,16 +103,19 @@ function Viewer({ source, doc, request, views }: {
   const showMark =
     readable && pageReady && source !== null && page === source.page && enabledKinds.has(sourceKind);
   useEffect(() => {
-    const previous = views.get(doc.id);
-    if (source && (previous?.source !== source || previous.request !== request)) {
-      setPage(source.page);
-      setEnabledKinds((kinds) => kinds.has(sourceKind) ? kinds : new Set([...kinds, sourceKind]));
-      setLocate((n) => n + 1);
-    }
-  }, [source, sourceKind, request, doc.id, views]);
+    const element = image.current;
+    if (pageImage && element?.complete && element.naturalWidth > 0) setLoadedImage(pageImage.src);
+  }, [pageImage]);
   useEffect(() => {
-    views.set(doc.id, { source, request, page, zoom, enabledKinds });
-  }, [doc.id, enabledKinds, page, request, source, views, zoom]);
+    const previous = views.get(doc.id);
+    if (selectedSource && (previous?.source !== selectedSource || previous.request !== request)) {
+      setPage(selectedSource.page);
+      setEnabledKinds((kinds) => kinds.has(sourceKind) ? kinds : new Set([...kinds, sourceKind]));
+    }
+  }, [selectedSource, sourceKind, request, doc.id, views]);
+  useEffect(() => {
+    views.set(doc.id, { source: selectedSource, request, page, zoom, enabledKinds });
+  }, [doc.id, enabledKinds, page, request, selectedSource, views, zoom]);
   useEffect(() => {
     const box = viewport.current;
     const el = mark.current;
@@ -123,11 +136,20 @@ function Viewer({ source, doc, request, views }: {
     observer.observe(box);
     if (el.parentElement) observer.observe(el.parentElement);
     return () => observer.disconnect();
-  }, [page, zoom, showMark, locate, source]);
+  }, [page, zoom, showMark, locate, source, request]);
+  useEffect(() => {
+    if (!showMark || !locate || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const pulse = mark.current?.animate?.(
+      [{ outline: "3px solid currentColor", outlineOffset: "5px" }, { outline: "0 solid transparent", outlineOffset: "0px" }],
+      { duration: 500, easing: "ease-out" },
+    );
+    return () => pulse?.cancel();
+  }, [showMark, locate]);
   const locateSource = () => {
-    if (!source) return;
-    setPage(source.page);
-    setEnabledKinds((previous) => new Set([...previous, sourceKind]));
+    if (!target) return;
+    if (!selectedSource) setAmountTarget(true);
+    setPage(target.page);
+    setEnabledKinds((previous) => new Set([...previous, source ? sourceKind : "money"]));
     setLocate((n) => n + 1);
   };
   const fields = doc.fields.filter((f) => f.page === page);
@@ -257,6 +279,7 @@ function Viewer({ source, doc, request, views }: {
               {pageImage ? (
                 <img
                   key={pageImage.src}
+                  ref={image}
                   className="document-page-image"
                   src={pageImage.src}
                   alt={`${doc.fileName ?? doc.title}, страница ${page}`}
@@ -381,13 +404,13 @@ function Viewer({ source, doc, request, views }: {
           )}
         </div>
       </div>
-      {source && <div className="document-source-footer">
+      {target && <div className="document-source-footer">
         <div>
           <small>
-            {sourceAmount ? "Сумма в выбранном документе" : "Выбранный фрагмент"} · стр.{" "}
-            {source.page}
+            {targetAmount != null ? "Сумма в выбранном документе" : "Выбранный фрагмент"} · стр.{" "}
+            {target.page}
           </small>
-          <strong>{sourceAmount ? `${formatMoney(sourceAmount)} ₽` : source.text}</strong>
+          <strong>{targetAmount != null ? `${formatMoney(targetAmount)} ₽` : target.text}</strong>
         </div>
         <button
           onClick={locateSource}
@@ -395,7 +418,7 @@ function Viewer({ source, doc, request, views }: {
           title="Перейти к подсвеченному фрагменту"
         >
           <Crosshair size={16} />
-          {sourceAmount ? "К сумме" : "К фрагменту"}
+          {targetAmount != null ? "К сумме" : "К фрагменту"}
         </button>
       </div>}
     </div>

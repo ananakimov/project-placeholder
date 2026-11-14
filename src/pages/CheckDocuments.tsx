@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { FileSearch } from "lucide-react";
 import { checkLocation } from "@/lib/check-location";
 import { Link } from "@tanstack/react-router";
@@ -30,7 +30,11 @@ const STATE_LABELS: Record<Doc["state"], string> = {
   "другой договор": "Другой договор",
   "не прочитан": "Не удалось прочитать",
 };
-export function CheckDocuments({ check, version }: { check: Check; version?: number }) {
+export function CheckDocuments({ check, version, renderHeader }: {
+  check: Check;
+  version?: number;
+  renderHeader?: (filters: ReactNode) => ReactNode;
+}) {
   const [filter, setFilter] = useState<DocumentFilter>("all");
   const workspace = useSourceWorkspace(check);
   const readCount = check.docs.filter((doc) => documentGroup(doc) === "read").length;
@@ -46,31 +50,29 @@ export function CheckDocuments({ check, version }: { check: Check; version?: num
     row.sources.some((source) => source.docId === docId)
       || row.evidenceDependencies?.includes(docId)
       || check.excluded.some((item) => item.docId === docId && item.rowIds?.includes(row.id)));
-
+  const statusFilters = (
+    <ToggleGroup
+      aria-label="Статус"
+      type="single"
+      value={filter}
+      onValueChange={(v) => v && setFilter(v as DocumentFilter)}
+      size="sm"
+      className="flex-wrap justify-start"
+    >
+      {filters.map((item) => (
+        <ToggleGroupItem key={item.value} value={item.value}
+          className="h-7 whitespace-nowrap px-2 text-xs text-muted-foreground data-[state=on]:bg-verified-bg data-[state=on]:text-primary">
+          {item.label} ({item.count})
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
 
   return (
     <div className="source-workspace space-y-4" data-source-open={workspace.panelOpen}
       onKeyDown={(event) => { if (event.key === "Escape" && workspace.panelOpen) workspace.close(); }}>
       <SourceWorkspace check={check} workspace={workspace} />
-      <div className="flex flex-col gap-1">
-        <span id="doc-filter" className="text-[12px] text-muted-foreground">
-          Статус
-        </span>
-        <ToggleGroup
-          aria-labelledby="doc-filter"
-          type="single"
-          value={filter}
-          onValueChange={(v) => v && setFilter(v as DocumentFilter)}
-          variant="outline"
-          className="justify-start flex-wrap bg-card"
-        >
-          {filters.map((item) => (
-            <ToggleGroupItem key={item.value} value={item.value} className="px-3 text-[13px]">
-              {item.label} ({item.count})
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </div>
+      {renderHeader ? renderHeader(statusFilters) : statusFilters}
       <div className="library-table overflow-hidden bg-card">
         <Table className="text-[13px] [&_td]:whitespace-normal">
           <TableHeader>

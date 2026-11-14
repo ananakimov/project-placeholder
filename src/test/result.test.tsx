@@ -23,22 +23,18 @@ function Result() {
 function setup() { render(<ChecksProvider><Result /></ChecksProvider>); }
 
 describe("Combined result", () => {
-  it("shows one conclusion and completeness above the six-column table", () => {
+  it("shows the conclusion and status counters above the six-column table", () => {
     setup();
     const conclusion = screen.getByRole("region", { name: "Заключение по проверке" });
-    const coverage = screen.getByRole("region", { name: "Полнота проверки" });
     const table = screen.getByRole("table", { name: "Показатели КФЗ" });
     expect(within(conclusion).getByRole("heading", { name: "Недостоверен" })).toBeInTheDocument();
     expect(screen.getAllByText("Недостоверен", { exact: true })).toHaveLength(1);
-    expect(coverage).toHaveTextContent(/Проверено: 11 из 11 показателей \(100\s?%\)/);
-    const money = within(coverage).getByText("Подробнее по суммам").closest("details")!;
-    expect(money.open).toBe(false);
-    money.open = true;
-    expect(within(money).getByRole("table", { name: "Суммы показателей по статусам" })).toHaveTextContent("38,6%");
+    expect(within(conclusion).getByRole("list", { name: "Счётчики показателей" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Полнота проверки" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Подробнее по суммам")).not.toBeInTheDocument();
     expect(table.compareDocumentPosition(screen.getByRole("button", { name: "Принять проверку" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.queryByText("Найденные проблемы")).not.toBeInTheDocument();
-    expect(conclusion.compareDocumentPosition(coverage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(coverage.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(conclusion.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(table).getAllByRole("columnheader").map((column) => column.textContent))
       .toEqual(["Показатель КФЗ", "В КФЗ", "Ожидаемо", "Разница Δ", "Статус", "Пояснение"]);
     const navigation = screen.getByRole("navigation", { name: "Разделы проверки" });
@@ -48,11 +44,10 @@ describe("Combined result", () => {
     const sample = checks.find((check) => check.id === "g")!;
     const { rerender } = render(<ChecksProvider><CheckDetail check={sample} /></ChecksProvider>);
     const conclusion = () => within(screen.getByRole("region", { name: "Заключение по проверке" }));
-    const completeness = () => screen.getByRole("region", { name: "Полнота проверки" });
+    const counters = () => within(conclusion().getByRole("list", { name: "Счётчики показателей" }));
     expect(conclusion().getByText(/по статье 0300 \(\+14\s800 ₽\) и по статье 0800 \(−25\s000 ₽\)/)).toBeInTheDocument();
     expect(conclusion().getByText(/Ещё 2 показателя не удалось проверить/)).toBeInTheDocument();
-    expect(completeness()).toHaveTextContent(/Проверено: 4 из 6 показателей \(66,7\s?%\)/);
-    expect(within(completeness()).getAllByRole("listitem").map((item) => item.textContent))
+    expect(counters().getAllByRole("listitem").map((item) => item.textContent))
       .toEqual(["Подтверждено — 2", "Расхождения — 2", "Не проверено — 2"]);
     expect(conclusion().queryByText(/7\s818\s300/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Итого" }).closest("tr"))
@@ -62,7 +57,8 @@ describe("Combined result", () => {
     rerender(<ChecksProvider><CheckDetail check={updated} version={2} /></ChecksProvider>);
     expect(conclusion().queryByText(/14\s800/)).not.toBeInTheDocument();
     expect(conclusion().getByText(/−25\s000 ₽/)).toBeInTheDocument();
-    expect(completeness()).toHaveTextContent(/Проверено: 3 из 6 показателей \(50\s?%\)/);
+    expect(counters().getAllByRole("listitem").map((item) => item.textContent))
+      .toEqual(["Подтверждено — 2", "Расхождения — 1", "Не проверено — 3"]);
   });
   it("opens and scrolls to a problem row even if search and filters had hidden it", () => {
     const c = checks.find((check) => check.id === "c")!;

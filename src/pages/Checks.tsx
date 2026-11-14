@@ -92,23 +92,23 @@ export function Checks({ checks: override, archive = false }: { checks?: Check[]
       </div>
       <div className="checks-section">
         <div className="checks-toolbar">
-          <div className="filter-tabs" aria-label="Фильтры проверок">
-            {!archive && (Object.keys(labels) as Filter[]).map((item) => (
-              <button key={item} type="button" onClick={() => setFilter(item)}
-                aria-pressed={filter === item} className={cn(filter === item && "active")}>
-                {labels[item]}
-                <span>{activeResults.filter((version) => matches(version.result, countByStatus(version.result), item)).length +
-                  (item === "all" ? activeJobs.length + pendingResults.length : 0)}</span>
-              </button>
-            ))}
+          <div className="search-wrap">
+            <Search size={16} aria-hidden="true" />
+            <Input aria-label="Поиск проверок" placeholder="Название или договор"
+              value={q} onChange={(event) => setQ(event.target.value)} />
           </div>
-          <div className="toolbar-inputs">
-            <div className="search-wrap">
-              <Search size={16} aria-hidden="true" />
-              <Input aria-label="Поиск проверок" placeholder="Название или договор"
-                value={q} onChange={(event) => setQ(event.target.value)} />
+          {!archive && (
+            <div className="filter-tabs" aria-label="Фильтры проверок">
+              {(Object.keys(labels) as Filter[]).map((item) => (
+                <button key={item} type="button" onClick={() => setFilter(item)}
+                  aria-pressed={filter === item} className={cn(filter === item && "active")}>
+                  {labels[item]}
+                  <span>{activeResults.filter((version) => matches(version.result, countByStatus(version.result), item)).length +
+                    (item === "all" ? activeJobs.length + pendingResults.length : 0)}</span>
+                </button>
+              ))}
             </div>
-          </div>
+          )}
         </div>
         <div className="checks-table-wrap">
           <table className="checks-table">

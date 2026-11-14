@@ -136,6 +136,33 @@ function Viewer({ source, doc, request, views }: {
   return (
     <div className="document-viewer">
       <div className="document-controls">
+        <fieldset className="annotation-legend" disabled={!readable}>
+          <legend>Извлечённые данные</legend>
+          <div>
+            {annotationTypes.map(({ kind, label }) => (
+              <label key={kind} data-kind={kind}>
+                <input
+                  type="checkbox"
+                  aria-label={`Подсветка: ${label}`}
+                  checked={enabledKinds.has(kind)}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setEnabledKinds((previous) => {
+                      const next = new Set(previous);
+                      if (checked) next.add(kind);
+                      else next.delete(kind);
+                      return next;
+                    });
+                  }}
+                />
+                <span className="annotation-checkbox">
+                  <Check size={12} strokeWidth={2.5} />
+                </span>
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <div className="document-toolbar">
           <div className="page-controls">
             <button
@@ -182,33 +209,6 @@ function Viewer({ source, doc, request, views }: {
             </button>
           </div>
         </div>
-        <fieldset className="annotation-legend" disabled={!readable}>
-          <legend>Извлечённые данные</legend>
-          <div>
-            {annotationTypes.map(({ kind, label }) => (
-              <label key={kind} data-kind={kind}>
-                <input
-                  type="checkbox"
-                  aria-label={`Подсветка: ${label}`}
-                  checked={enabledKinds.has(kind)}
-                  onChange={(event) => {
-                    const checked = event.target.checked;
-                    setEnabledKinds((previous) => {
-                      const next = new Set(previous);
-                      if (checked) next.add(kind);
-                      else next.delete(kind);
-                      return next;
-                    });
-                  }}
-                />
-                <span className="annotation-checkbox">
-                  <Check size={12} strokeWidth={2.5} />
-                </span>
-                {label}
-              </label>
-            ))}
-          </div>
-        </fieldset>
       </div>
       {doc.state !== "прочитан" && (
         <div className="document-warning">

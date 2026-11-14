@@ -76,6 +76,10 @@ function Reconciliation({ check }: { check: CheckData }) {
   }
   function showEvidence(next: EvidenceSelection, trigger: HTMLElement) {
     returnFocus.current = trigger;
+    if (!rows.some((row) => row.id === next.rowId)) {
+      setQuery("");
+      setFilter("all");
+    }
     setEvidence(next);
     setPanelOpen(true);
     requestAnimationFrame(() => {

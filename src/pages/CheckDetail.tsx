@@ -161,7 +161,7 @@ function Reconciliation({ check }: { check: CheckData }) {
                   </td>
                   <td className="result-explanation-cell"><span>{indicatorExplanation(row)}</span></td>
                 </tr>
-                {isExpanded && <tr className="source-subrow"><td colSpan={6} className="!p-0 !text-left"><div id={`details-${row.id}`} role="region" aria-label={`Подробности: ${row.name}`} className="space-y-4 border-b bg-card p-5">
+                {isExpanded && <tr><td colSpan={6} className="!p-0 !text-left"><div id={`details-${row.id}`} role="region" aria-label={`Подробности: ${row.name}`} className="space-y-4 border-b bg-card p-5">
                   {row.breakdown && <section aria-label={`В том числе: ${row.name}`}>
                     <h3 className="mb-3 text-sm font-medium">В том числе — по КФЗ</h3>
                     <BreakdownList items={row.breakdown} />
@@ -169,7 +169,13 @@ function Reconciliation({ check }: { check: CheckData }) {
                   <RowDocuments row={row} check={check} onOpen={(index, trigger) => openSource(row.id, index, trigger)} />
                   <p className="text-sm"><strong>{indicatorStatus[row.status]}.</strong> {indicatorExplanation(row)}</p>
                   {row.partialNote && <p className="text-sm text-muted-foreground">{row.partialNote}</p>}
-                  {row.recommendation && <p className="text-sm"><strong>Рекомендация</strong> {row.recommendation}</p>}
+                  {row.status !== "verified" && !!row.causes?.length && <div className="text-sm">
+                    <strong>Возможные причины</strong>
+                    <ul className="list-disc space-y-1 pl-4">
+                      {row.causes.map((cause) => <li key={cause}>{cause}</li>)}
+                    </ul>
+                  </div>}
+                  {row.status !== "verified" && row.recommendation && <p className="text-sm"><strong>Рекомендация</strong> {row.recommendation}</p>}
                   {row.status !== "verified" && <details>
                     <summary className="cursor-pointer text-sm text-primary">Действия бухгалтера</summary>
                     <div className="mt-2"><CheckActions check={check} row={row} showVariants={false} /></div>

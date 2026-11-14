@@ -27,6 +27,7 @@ function expectExampleUnchanged() {
 }
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   localStorage.clear();
   vi.useRealTimers();
   navigate.mockReset();
@@ -85,6 +86,22 @@ describe("Single-screen new check", () => {
     expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: `Убрать ${name}` }));
     expect(screen.getByRole("button", { name: "Добавить в демо-очередь" })).toBeDisabled();
+  });
+  it("keeps sequential demo jobs in memory when the storage quota is exceeded", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Storage quota exceeded", "QuotaExceededError");
+    });
+    vi.useFakeTimers();
+    setup();
+    for (const number of [1, 2]) {
+      upload("report", `КФЗ ${number}.pdf`);
+      upload("docs", `Акт ${number}.pdf`);
+      fireEvent.click(screen.getByRole("button", { name: "Добавить в демо-очередь" }));
+    }
+    const recent = within(screen.getByRole("region", { name: "Последние демо-задания" }));
+    expect(recent.getAllByRole("listitem")).toHaveLength(2);
+    expect(recent.getByText("В очереди")).toBeInTheDocument();
+    expect(recent.getByText("Имитация обработки")).toBeInTheDocument();
   });
   it("retains format filtering, one report and append behavior for primary documents", () => {
     setup(); upload("report", "КФЗ.pdf", "Второй.pdf", "Неподходящий.xlsx");

@@ -4,7 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CheckConclusion } from "@/pages/CheckConclusion";
 import { CheckDetail } from "@/pages/CheckDetail";
 import { CheckHeader } from "@/components/check/CheckHeader";
-import { ChecksProvider, useChecks } from "@/context/ChecksContext";
+import { ChecksProvider, applyVariants, useChecks } from "@/context/ChecksContext";
 import { checks } from "@/data/mock";
 import { PROBLEMS } from "@/data/problems";
 
@@ -59,12 +59,30 @@ describe("Combined result", () => {
       for (const id of problem.rowIds) expect(check.rows.some((row) => row.id === id)).toBe(true);
     }
   });
+  it("keeps possible causes in an expanded row without a source document", () => {
+    render(<ChecksProvider><CheckDetail check={checks.find((check) => check.id === "g")!} /></ChecksProvider>);
+    const name = "Трудоемкость (человеко-месяц)";
+    fireEvent.click(screen.getByRole("button", { name }));
+    const details = within(screen.getByRole("region", { name: `Подробности: ${name}` }));
+    expect(details.getByText("Возможные причины")).toBeInTheDocument();
+    expect(details.getByText("Ведомости подтверждают суммы, но не трудоёмкость в человеко-месяцах.")).toBeInTheDocument();
+    expect(details.getByText("Рекомендация")).toBeInTheDocument();
+  });
+  it("hides obsolete causes and recommendations after an indicator is corrected", () => {
+    const check = applyVariants(b, { "b-1": "fix" });
+    render(<ChecksProvider><CheckDetail check={check} /></ChecksProvider>);
+    fireEvent.click(screen.getByRole("button", { name: "Оплата труда" }));
+    const details = within(screen.getByRole("region", { name: "Подробности: Оплата труда" }));
+    expect(details.getByText("Подтверждено.")).toBeInTheDocument();
+    expect(details.queryByText("Возможные причины")).not.toBeInTheDocument();
+    expect(details.queryByText("Рекомендация")).not.toBeInTheDocument();
+  });
   it("shows insufficient evidence with rule reasons and partial sums, without an unsupported document checklist", () => {
     const c = checks.find((check) => check.id === "c")!;
     const original = structuredClone(c);
     render(<ChecksProvider><CheckConclusion check={c} /></ChecksProvider>);
     const section = screen.getByRole("heading", { name: "Недостаточно подтверждений" }).closest("section")!;
-    expect(within(section).queryByText("Недостаточно данных для проверки")).not.toBeInTheDocument();
+    expect(within(section).getByText("Недостаточно данных для проверки")).toBeInTheDocument();
     expect(within(section).getAllByRole("listitem")).toHaveLength(5);
     expect(within(section).getByText("Пропущен документ: ведомость за сентябрь")).toBeInTheDocument();
     expect(within(section).getByText("найдено 720000.00 за 3 из 4 мес.")).toBeInTheDocument();

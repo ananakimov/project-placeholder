@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "doccheck.demo-queue.v1";
 const DURATION_MS = 5_000;
@@ -29,6 +29,7 @@ export function useDemoQueue() {
   const [jobs, setJobs] = useState<DemoJob[]>([]);
   const [ready, setReady] = useState(false);
   const [now, setNow] = useState(0);
+  const inMemory = useRef(false);
 
   useEffect(() => {
     function sync() {
@@ -38,7 +39,7 @@ export function useDemoQueue() {
     sync();
     setReady(true);
     function onStorage(event: StorageEvent) {
-      if (event.key === STORAGE_KEY || event.key === null) sync();
+      if (!inMemory.current && (event.key === STORAGE_KEY || event.key === null)) sync();
     }
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -55,13 +56,15 @@ export function useDemoQueue() {
     const createdAt = Date.now();
     const id = globalThis.crypto.randomUUID?.() ??
       Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4)), (value) => value.toString(16)).join("-");
-    const previous = readJobs() ?? jobs;
+    const previous = inMemory.current ? jobs : readJobs() ?? jobs;
     const startsAt = Math.max(createdAt, ...previous.map((job) => job.startsAt + DURATION_MS));
     const next = [{ id, createdAt, startsAt, documents }, ...previous].slice(0, 50);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // The demo continues in memory if the browser blocks storage.
+    if (!inMemory.current) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        inMemory.current = true;
+      }
     }
     setNow(createdAt);
     setJobs(next);

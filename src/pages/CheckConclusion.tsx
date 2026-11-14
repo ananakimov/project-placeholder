@@ -70,6 +70,7 @@ export function CheckConclusion({ check, onProblemSelect, children }: {
       </div>}
       {unverified.length > 0 && <section className={cardClass}>
         <h3 className="mb-2 text-sm font-medium">Недостаточно подтверждений</h3>
+        <p className="mb-2 text-sm text-muted-foreground">Недостаточно данных для проверки</p>
         <ul className="space-y-2 text-[13px]">{unverified.map((row) => <li key={row.id}>
           {onProblemSelect
             ? <button type="button" className="text-left font-medium text-primary underline"
